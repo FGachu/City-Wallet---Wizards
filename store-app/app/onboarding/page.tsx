@@ -29,8 +29,10 @@ import type {
   WindowId,
 } from "./_components/types";
 import { motion } from "framer-motion";
+import { useOnboarding } from "@/lib/onboarding-context";
 
 export default function OnboardingPage() {
+  const { complete } = useOnboarding();
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [scanState, setScanState] = useState<ScanState>("idle");
@@ -77,6 +79,10 @@ export default function OnboardingPage() {
     const id = setInterval(() => setPreviewIndex((i) => i + 1), 8000);
     return () => clearInterval(id);
   }, [items.length]);
+
+  useEffect(() => {
+    if (verifyStatus === "verified") complete();
+  }, [verifyStatus, complete]);
 
   const totalRevenue = items.reduce((acc, i) => acc + i.price, 0);
   const avgPrice = items.length ? totalRevenue / items.length : 0;

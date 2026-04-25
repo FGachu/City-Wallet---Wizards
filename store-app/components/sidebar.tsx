@@ -9,10 +9,10 @@ import {
   Tag,
   Settings,
   Sparkles,
-  Store,
   Wand2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useOnboarding } from "@/lib/onboarding-context";
 
 const items = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
@@ -20,12 +20,13 @@ const items = [
   { href: "/products", label: "Products", icon: Package },
   { href: "/monitoring", label: "Monitoring", icon: Activity },
   { href: "/offers", label: "Live offers", icon: Tag },
-  { href: "/register", label: "Register restaurant", icon: Store },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { completed } = useOnboarding();
+
   return (
     <aside className="w-64 shrink-0 border-r border-ink-200 bg-white px-4 py-6 flex flex-col gap-8">
       <div className="px-2">
@@ -47,7 +48,30 @@ export default function Sidebar() {
       <nav className="flex flex-col gap-0.5">
         {items.map((item) => {
           const active = pathname === item.href;
+          const isOnboarding = item.href === "/onboarding";
+          const locked = !completed && !isOnboarding;
           const Icon = item.icon;
+
+          const content = (
+            <>
+              <Icon className="size-4" />
+              <span>{item.label}</span>
+            </>
+          );
+
+          if (locked) {
+            return (
+              <span
+                key={item.href}
+                aria-disabled="true"
+                title="Finish onboarding to unlock"
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-ink-300 cursor-not-allowed select-none"
+              >
+                {content}
+              </span>
+            );
+          }
+
           return (
             <Link
               key={item.href}
@@ -59,8 +83,7 @@ export default function Sidebar() {
                   : "text-ink-600 hover:bg-ink-100 hover:text-ink-900"
               )}
             >
-              <Icon className="size-4" />
-              {item.label}
+              {content}
             </Link>
           );
         })}
