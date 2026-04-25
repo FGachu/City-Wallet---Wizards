@@ -4,6 +4,7 @@ Minimal async backend for a city wallet app with:
 - `GET /context`
 - `POST /generate-offer`
 - `POST /redeem`
+- `GET /` dumb frontend for quick manual testing
 
 ## Run
 
@@ -24,6 +25,12 @@ set OPENAI_API_KEY=your_openai_api_key_here
 
 ```bash
 uvicorn main:app --reload
+```
+
+5. Open:
+
+```
+http://127.0.0.1:8000/
 ```
 
 ## Endpoint examples

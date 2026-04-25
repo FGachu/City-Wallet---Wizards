@@ -6,12 +6,16 @@ from datetime import datetime, timezone
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 
 
 app = FastAPI(title="City Wallet Backend", version="0.1.0")
-openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+STATIC_DIR = "static"
+
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 class Weather(BaseModel):
@@ -109,6 +113,11 @@ def build_context(city: str) -> ContextResponse:
     )
 
 
+@app.get("/", include_in_schema=False)
+async def serve_frontend() -> FileResponse:
+    return FileResponse(f"{STATIC_DIR}/index.html")
+
+
 @app.get("/context", response_model=ContextResponse)
 async def get_context(city: str = "Tashkent") -> ContextResponse:
     return build_context(city=city)
@@ -116,8 +125,10 @@ async def get_context(city: str = "Tashkent") -> ContextResponse:
 
 @app.post("/generate-offer", response_model=GenerateOfferResponse)
 async def generate_offer(payload: GenerateOfferRequest) -> GenerateOfferResponse:
-    if not os.getenv("OPENAI_API_KEY"):
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
         raise HTTPException(status_code=500, detail="OPENAI_API_KEY is not set.")
+    openai_client = AsyncOpenAI(api_key=api_key)
 
     context = build_context(city=payload.city)
     prompt = f"""
