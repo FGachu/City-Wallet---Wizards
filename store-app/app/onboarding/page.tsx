@@ -1,27 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import { Card, CardHead } from "./_components/card";
 import {
   buildOffer,
   CustomerPreview,
 } from "./_components/customer-preview";
-import { SCANNED_ITEMS } from "./_components/data";
 import { IdentityCard } from "./_components/identity-card";
 import { LiveToggle } from "./_components/live-toggle";
 import {
+  ComingSoonUpload,
   InventoryPreview,
-  ScanningView,
-  UploadArea,
 } from "./_components/menu-capture";
 import { PrivacyCard } from "./_components/privacy-card";
 import { QuietWindowsPanel } from "./_components/quiet-windows-panel";
 import { AggressivenessSlider } from "./_components/rules-config";
 import { VerifyOwnership } from "./_components/verify-ownership";
 import type {
+  CardStatus,
   MenuItem,
-  ScanState,
   VerifyMethod,
   VerifyStatus,
   WindowId,
@@ -33,8 +31,7 @@ export default function OnboardingPage() {
   const { complete } = useOnboarding();
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
-  const [scanState, setScanState] = useState<ScanState>("idle");
-  const [progress, setProgress] = useState(0);
+  const [menuMode, setMenuMode] = useState<"idle" | "manual">("idle");
   const [items, setItems] = useState<MenuItem[]>([]);
   const [aggressiveness, setAggressiveness] = useState(1);
   const [windows, setWindows] = useState<WindowId[]>(["afternoon"]);
@@ -45,27 +42,9 @@ export default function OnboardingPage() {
   const [verifyStatus, setVerifyStatus] = useState<VerifyStatus>("idle");
   const [payoneMerchantId, setPayoneMerchantId] = useState("");
 
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [dragging, setDragging] = useState(false);
-
-  const startScan = () => {
-    setScanState("scanning");
-    setProgress(0);
-    const interval = setInterval(() => {
-      setProgress((p) => Math.min(p + Math.random() * 12 + 5, 95));
-    }, 90);
-    setTimeout(() => {
-      clearInterval(interval);
-      setProgress(100);
-      setItems(SCANNED_ITEMS);
-      setTimeout(() => setScanState("done"), 280);
-    }, 2000);
-  };
-
-  const reset = () => {
-    setScanState("idle");
+  const startManual = () => {
+    setMenuMode("manual");
     setItems([]);
-    setProgress(0);
   };
 
   const { offer, variant, pool } = useMemo(
@@ -86,8 +65,10 @@ export default function OnboardingPage() {
   const totalRevenue = items.reduce((acc, i) => acc + i.price, 0);
   const avgPrice = items.length ? totalRevenue / items.length : 0;
 
-  const stepStatus = (done: boolean) =>
-    scanState !== "done" ? "locked" : done ? "done" : "active";
+  const menuReady = items.length > 0;
+  const menuStatus: CardStatus = menuReady ? "done" : "active";
+  const stepStatus = (done: boolean): CardStatus =>
+    !menuReady ? "locked" : done ? "done" : "active";
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 lg:space-y-8 pb-12">
@@ -101,7 +82,7 @@ export default function OnboardingPage() {
             From menu to live offers
           </h1>
           <p className="text-sm text-ink-500 mt-1.5 max-w-xl leading-relaxed">
-            Capture your menu, set the rules, go live. The AI handles the rest —
+            Add your menu, set the rules, go live. The AI handles the rest —
             generating the right offer for the right person at the right minute.
           </p>
         </div>
@@ -111,7 +92,7 @@ export default function OnboardingPage() {
           disabled={items.length === 0 || verifyStatus !== "verified"}
           blockedReason={
             items.length === 0
-              ? "Capture menu first"
+              ? "Add menu items first"
               : verifyStatus !== "verified"
               ? "Verify ownership first"
               : undefined
@@ -128,44 +109,28 @@ export default function OnboardingPage() {
             setAddress={setAddress}
           />
 
-          <Card status={scanState === "done" ? "done" : "active"}>
+          <Card status={menuStatus}>
             <CardHead
               step="1"
-              title="Capture your menu"
-              hint="Snap a photo or upload — the AI reads everything in 2 seconds."
-              status={scanState === "done" ? "done" : "active"}
+              title="Add your menu"
+              hint="AI-powered menu scanning is on its way. For now, add your items manually."
+              status={menuStatus}
             />
             <AnimatePresence mode="wait">
-              {scanState === "idle" && (
+              {menuMode === "idle" && (
                 <motion.div
-                  key="upload"
+                  key="coming-soon"
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
                   transition={{ duration: 0.18 }}
                 >
-                  <UploadArea
-                    dragging={dragging}
-                    setDragging={setDragging}
-                    onCapture={startScan}
-                    inputRef={inputRef}
-                  />
+                  <ComingSoonUpload onManual={startManual} />
                 </motion.div>
               )}
-              {scanState === "scanning" && (
+              {menuMode === "manual" && (
                 <motion.div
-                  key="scan"
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.18 }}
-                >
-                  <ScanningView progress={progress} />
-                </motion.div>
-              )}
-              {scanState === "done" && (
-                <motion.div
-                  key="results"
+                  key="manual"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
@@ -174,8 +139,9 @@ export default function OnboardingPage() {
                   <InventoryPreview
                     items={items}
                     setItems={setItems}
-                    onRescan={reset}
+                    onRescan={() => setMenuMode("idle")}
                     avgPrice={avgPrice}
+                    manualMode
                   />
                 </motion.div>
               )}

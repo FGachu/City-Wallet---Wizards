@@ -1,18 +1,76 @@
 "use client";
 
+import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Camera,
   Check,
   Loader2,
+  Pencil,
   Plus,
   RefreshCw,
   ScanLine,
+  Sparkles,
   Trash2,
   Upload,
 } from "lucide-react";
 import { cn, euro } from "@/lib/utils";
 import type { MenuItem } from "./types";
+
+export const MENU_AI_SCAN_ENABLED = false;
+
+const CATEGORY_SUGGESTIONS = [
+  "Drinks",
+  "Pastries",
+  "Mains",
+  "Desserts",
+  "Snacks",
+  "Sides",
+];
+
+export function ComingSoonUpload({ onManual }: { onManual: () => void }) {
+  return (
+    <div className="space-y-4">
+      <div className="relative rounded-xl border-2 border-dashed border-ink-200 bg-ink-50/40 px-5 py-8 overflow-hidden">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 opacity-45 pointer-events-none select-none">
+          <div className="flex flex-col items-center justify-center gap-1.5 text-ink-500 py-2">
+            <Upload className="size-6" />
+            <span className="text-sm font-semibold mt-1">
+              Drop or click to upload
+            </span>
+            <span className="text-[11px]">PDF, JPG, PNG · 5 MB max</span>
+          </div>
+          <div className="flex flex-col items-center justify-center gap-1.5 text-ink-500 py-2">
+            <Camera className="size-6" />
+            <span className="text-sm font-semibold mt-1">Take a photo</span>
+            <span className="text-[11px]">Use the back camera</span>
+          </div>
+        </div>
+        <div className="absolute top-3 right-3">
+          <span className="inline-flex items-center gap-1 rounded-full bg-white border border-ink-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-ink-700 shadow-sm">
+            <Sparkles className="size-3 text-brand-500" />
+            Coming soon
+          </span>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 text-[11px] uppercase tracking-wider text-ink-400">
+        <span className="h-px flex-1 bg-ink-100" />
+        For now, add items manually
+        <span className="h-px flex-1 bg-ink-100" />
+      </div>
+
+      <button
+        type="button"
+        onClick={onManual}
+        className="w-full rounded-xl bg-ink-900 text-white py-3 text-sm font-semibold inline-flex items-center justify-center gap-2 hover:bg-ink-800 transition"
+      >
+        <Pencil className="size-4" />
+        Start manual entry
+      </button>
+    </div>
+  );
+}
 
 export function UploadArea({
   dragging,
@@ -132,80 +190,172 @@ export function InventoryPreview({
   setItems,
   onRescan,
   avgPrice,
+  manualMode = false,
 }: {
   items: MenuItem[];
   setItems: React.Dispatch<React.SetStateAction<MenuItem[]>>;
   onRescan: () => void;
   avgPrice: number;
+  manualMode?: boolean;
 }) {
+  const [draftName, setDraftName] = useState("");
+  const [draftPrice, setDraftPrice] = useState("");
+  const [draftCategory, setDraftCategory] = useState("");
+
   const remove = (id: string) =>
     setItems((arr) => arr.filter((i) => i.id !== id));
+
+  const add = () => {
+    const price = parseFloat(draftPrice.replace(",", "."));
+    if (!draftName.trim() || !Number.isFinite(price) || price <= 0) return;
+    setItems((arr) => [
+      ...arr,
+      {
+        id: `m-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
+        name: draftName.trim(),
+        price,
+        category: draftCategory.trim() || "Other",
+      },
+    ]);
+    setDraftName("");
+    setDraftPrice("");
+  };
+
+  const canAdd =
+    draftName.trim().length > 0 &&
+    Number.isFinite(parseFloat(draftPrice.replace(",", "."))) &&
+    parseFloat(draftPrice.replace(",", ".")) > 0;
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 px-2.5 py-1 text-[11px] font-medium">
-          <Check className="size-3" />
-          {items.length} items extracted · avg {euro(avgPrice)}
-        </div>
-        <button
-          type="button"
-          onClick={onRescan}
-          className="text-xs text-ink-500 hover:text-ink-900 inline-flex items-center gap-1.5"
+        <div
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium",
+            items.length > 0
+              ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+              : "bg-amber-50 border-amber-200 text-amber-700"
+          )}
         >
-          <RefreshCw className="size-3.5" />
-          Rescan
-        </button>
+          {items.length > 0 ? (
+            <>
+              <Check className="size-3" />
+              {items.length} items · avg {euro(avgPrice)}
+            </>
+          ) : (
+            <>
+              <Pencil className="size-3" />
+              Add at least one item to go live
+            </>
+          )}
+        </div>
+        {!manualMode && (
+          <button
+            type="button"
+            onClick={onRescan}
+            className="text-xs text-ink-500 hover:text-ink-900 inline-flex items-center gap-1.5"
+          >
+            <RefreshCw className="size-3.5" />
+            Rescan
+          </button>
+        )}
       </div>
 
       <div className="rounded-xl border border-ink-200 overflow-hidden">
-        <div className="grid grid-cols-[1fr_auto_28px] gap-3 px-4 py-2 bg-ink-50 text-[11px] uppercase tracking-wider text-ink-500 font-medium">
-          <span>Item</span>
-          <span className="text-right">Price</span>
-          <span />
-        </div>
-        <ul className="divide-y divide-ink-100 max-h-[360px] overflow-y-auto">
-          <AnimatePresence initial={true}>
-            {items.map((item, i) => (
-              <motion.li
-                key={item.id}
-                layout
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 8 }}
-                transition={{ delay: i * 0.04, duration: 0.2 }}
-                className="grid grid-cols-[1fr_auto_28px] items-center gap-3 px-4 py-2.5 hover:bg-ink-50/60 group"
-              >
-                <div className="min-w-0">
-                  <div className="text-sm font-medium truncate">
-                    {item.name}
-                  </div>
-                  <div className="text-[11px] text-ink-500">
-                    {item.category}
-                  </div>
-                </div>
-                <div className="text-sm font-semibold tabular-nums">
-                  {euro(item.price)}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => remove(item.id)}
-                  className="size-7 rounded-md grid place-items-center text-ink-300 hover:text-rose-600 hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition"
-                  aria-label={`Remove ${item.name}`}
-                >
-                  <Trash2 className="size-3.5" />
-                </button>
-              </motion.li>
-            ))}
-          </AnimatePresence>
-        </ul>
-        <button
-          type="button"
-          className="w-full text-xs text-ink-500 hover:text-ink-700 inline-flex items-center justify-center gap-1 py-2.5 border-t border-ink-100"
+        {items.length > 0 && (
+          <>
+            <div className="grid grid-cols-[1fr_auto_28px] gap-3 px-4 py-2 bg-ink-50 text-[11px] uppercase tracking-wider text-ink-500 font-medium">
+              <span>Item</span>
+              <span className="text-right">Price</span>
+              <span />
+            </div>
+            <ul className="divide-y divide-ink-100 max-h-[360px] overflow-y-auto">
+              <AnimatePresence initial={true}>
+                {items.map((item, i) => (
+                  <motion.li
+                    key={item.id}
+                    layout
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 8 }}
+                    transition={{ delay: i * 0.04, duration: 0.2 }}
+                    className="grid grid-cols-[1fr_auto_28px] items-center gap-3 px-4 py-2.5 hover:bg-ink-50/60 group"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium truncate">
+                        {item.name}
+                      </div>
+                      <div className="text-[11px] text-ink-500">
+                        {item.category}
+                      </div>
+                    </div>
+                    <div className="text-sm font-semibold tabular-nums">
+                      {euro(item.price)}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => remove(item.id)}
+                      className="size-7 rounded-md grid place-items-center text-ink-300 hover:text-rose-600 hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition"
+                      aria-label={`Remove ${item.name}`}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </motion.li>
+                ))}
+              </AnimatePresence>
+            </ul>
+          </>
+        )}
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            add();
+          }}
+          className={cn(
+            "p-3 bg-ink-50/30 grid grid-cols-1 sm:grid-cols-[1fr_120px_auto] gap-2",
+            items.length > 0 && "border-t border-ink-100"
+          )}
         >
-          <Plus className="size-3.5" />
-          Add an item manually
-        </button>
+          <input
+            value={draftName}
+            onChange={(e) => setDraftName(e.target.value)}
+            placeholder="Item name"
+            className="rounded-md border border-ink-200 bg-white px-3 py-2 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+          />
+          <input
+            value={draftPrice}
+            onChange={(e) => setDraftPrice(e.target.value)}
+            placeholder="€ 0.00"
+            inputMode="decimal"
+            className="rounded-md border border-ink-200 bg-white px-3 py-2 text-sm tabular-nums focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+          />
+          <button
+            type="submit"
+            disabled={!canAdd}
+            className={cn(
+              "rounded-md px-4 text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition",
+              canAdd
+                ? "bg-ink-900 text-white hover:bg-ink-800"
+                : "bg-ink-100 text-ink-400 cursor-not-allowed"
+            )}
+          >
+            <Plus className="size-3.5" />
+            Add
+          </button>
+          <input
+            list="menu-categories"
+            value={draftCategory}
+            onChange={(e) => setDraftCategory(e.target.value)}
+            placeholder="Category (optional)"
+            className="sm:col-span-3 rounded-md border border-ink-200 bg-white px-3 py-1.5 text-xs text-ink-700 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+          />
+          <datalist id="menu-categories">
+            {CATEGORY_SUGGESTIONS.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
+        </form>
       </div>
     </div>
   );
