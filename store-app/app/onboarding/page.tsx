@@ -196,7 +196,7 @@ export default function OnboardingPage() {
               />
               <QuietWindowsPanel
                 merchantId={payoneMerchantId}
-                verifyStatus={verifyStatus}
+                setMerchantId={setPayoneMerchantId}
                 windows={windows}
                 setWindows={setWindows}
               />

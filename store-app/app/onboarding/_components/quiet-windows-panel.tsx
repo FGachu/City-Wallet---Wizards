@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Loader2, Sparkles, Sliders, Lock } from "lucide-react";
+import { Loader2, Sparkles, Sliders, Link2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getDensityProvider } from "@/lib/transaction-density";
 import {
@@ -14,22 +14,25 @@ import type {
   MerchantDensity,
   QuietWindow,
 } from "@/lib/transaction-density/types";
-import type { VerifyStatus, WindowId } from "./types";
+import type { WindowId } from "./types";
 import { TimeWindowChips } from "./rules-config";
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
+const inputCls =
+  "w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500";
+
 type Props = {
   merchantId: string;
-  verifyStatus: VerifyStatus;
+  setMerchantId: (id: string) => void;
   windows: WindowId[];
   setWindows: (w: WindowId[]) => void;
 };
 
 export function QuietWindowsPanel({
   merchantId,
-  verifyStatus,
+  setMerchantId,
   windows,
   setWindows,
 }: Props) {
@@ -38,10 +41,10 @@ export function QuietWindowsPanel({
   const [overrideMode, setOverrideMode] = useState(false);
   const lastAppliedRef = useRef<string | null>(null);
 
-  const verified = verifyStatus === "verified";
+  const connected = merchantId.trim().length >= 6;
 
   useEffect(() => {
-    if (!verified || !merchantId) {
+    if (!connected) {
       setDensity(null);
       return;
     }
@@ -58,7 +61,7 @@ export function QuietWindowsPanel({
     return () => {
       cancelled = true;
     };
-  }, [merchantId, verified]);
+  }, [merchantId, connected]);
 
   const detected = useMemo<QuietWindow[]>(
     () => (density ? detectQuietWindows(density) : []),
@@ -76,8 +79,10 @@ export function QuietWindowsPanel({
     if (auto.length) setWindows(auto);
   }, [density, detected, overrideMode, setWindows]);
 
-  if (!verified) {
-    return <PreVerifyState windows={windows} setWindows={setWindows} />;
+  if (!connected) {
+    return (
+      <ConnectPayone merchantId={merchantId} setMerchantId={setMerchantId} />
+    );
   }
 
   return (
@@ -154,24 +159,41 @@ export function QuietWindowsPanel({
   );
 }
 
-function PreVerifyState({
-  windows,
-  setWindows,
+function ConnectPayone({
+  merchantId,
+  setMerchantId,
 }: {
-  windows: WindowId[];
-  setWindows: (w: WindowId[]) => void;
+  merchantId: string;
+  setMerchantId: (v: string) => void;
 }) {
   return (
     <div>
-      <div className="rounded-xl border border-dashed border-ink-300 bg-ink-50/30 p-3 mb-4 flex items-start gap-2.5">
-        <Lock className="size-4 text-ink-500 shrink-0 mt-0.5" />
-        <div className="text-xs text-ink-600 leading-relaxed">
-          Once you verify your Payone Merchant ID below, we&apos;ll detect your
-          quiet windows automatically from real transaction density. For now,
-          set them by hand — you can override anytime.
+      <div className="mb-3">
+        <div className="text-sm font-medium text-ink-800 inline-flex items-center gap-1.5">
+          <Sparkles className="size-3.5 text-brand-500" />
+          Quiet windows · auto-detected
+        </div>
+        <div className="text-[11px] text-ink-500 mt-0.5 leading-relaxed">
+          Connect your Payone Merchant ID — we&apos;ll read your last 30 days of
+          transaction density and pick your quiet windows automatically.
         </div>
       </div>
-      <TimeWindowChips value={windows} onChange={setWindows} />
+      <label className="block">
+        <div className="text-[11px] uppercase tracking-wider text-ink-500 mb-1 inline-flex items-center gap-1.5">
+          <Link2 className="size-3" />
+          Payone Merchant ID
+        </div>
+        <input
+          value={merchantId}
+          onChange={(e) => setMerchantId(e.target.value)}
+          placeholder="DE-1234567"
+          className={cn(inputCls, "font-mono")}
+        />
+        <div className="text-[11px] text-ink-500 mt-1.5 leading-relaxed">
+          Read-only access to transaction volume — never payment details, never
+          customer data.
+        </div>
+      </label>
     </div>
   );
 }

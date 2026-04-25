@@ -1,6 +1,13 @@
+"use client";
+
 import { Bell, Search } from "lucide-react";
+import { useOnboarding } from "@/lib/onboarding-context";
 
 export default function Topbar() {
+  const { completed, hydrated } = useOnboarding();
+
+  if (!hydrated || !completed) return null;
+
   return (
     <header className="h-16 border-b border-ink-200 bg-white px-8 flex items-center justify-between gap-6">
       <div className="flex items-center gap-4">
