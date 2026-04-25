@@ -16,10 +16,8 @@ import {
   UploadArea,
 } from "./_components/menu-capture";
 import { PrivacyCard } from "./_components/privacy-card";
-import {
-  AggressivenessSlider,
-  TimeWindowChips,
-} from "./_components/rules-config";
+import { QuietWindowsPanel } from "./_components/quiet-windows-panel";
+import { AggressivenessSlider } from "./_components/rules-config";
 import { VerifyOwnership } from "./_components/verify-ownership";
 import type {
   MenuItem,
@@ -45,6 +43,7 @@ export default function OnboardingPage() {
 
   const [verifyMethod, setVerifyMethod] = useState<VerifyMethod>("payone");
   const [verifyStatus, setVerifyStatus] = useState<VerifyStatus>("idle");
+  const [payoneMerchantId, setPayoneMerchantId] = useState("");
 
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -195,7 +194,12 @@ export default function OnboardingPage() {
                 value={aggressiveness}
                 onChange={setAggressiveness}
               />
-              <TimeWindowChips value={windows} onChange={setWindows} />
+              <QuietWindowsPanel
+                merchantId={payoneMerchantId}
+                verifyStatus={verifyStatus}
+                windows={windows}
+                setWindows={setWindows}
+              />
             </div>
           </Card>
 
@@ -213,6 +217,8 @@ export default function OnboardingPage() {
               setStatus={setVerifyStatus}
               name={name}
               address={address}
+              merchantId={payoneMerchantId}
+              setMerchantId={setPayoneMerchantId}
             />
           </Card>
         </div>

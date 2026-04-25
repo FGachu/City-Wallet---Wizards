@@ -26,6 +26,8 @@ export function VerifyOwnership({
   setStatus,
   name,
   address,
+  merchantId,
+  setMerchantId,
 }: {
   method: VerifyMethod;
   setMethod: (m: VerifyMethod) => void;
@@ -33,8 +35,9 @@ export function VerifyOwnership({
   setStatus: (s: VerifyStatus) => void;
   name: string;
   address: string;
+  merchantId: string;
+  setMerchantId: (v: string) => void;
 }) {
-  const [merchantId, setMerchantId] = useState("");
   const [iban, setIban] = useState("");
 
   const current = VERIFY_METHODS.find((m) => m.id === method)!;
