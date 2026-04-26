@@ -11,7 +11,7 @@ export type AgentKey =
   | "offer-generator-agent"
   | "ux-copy-agent"
   | "checkout-agent"
-  | "merchant-rules-agent"
+  | "checkout-agent"
   | "analytics-agent";
 
 export type AgentStatus = "idle" | "running" | "success" | "error";
@@ -75,7 +75,6 @@ const seededTokenWeights: Record<AgentKey, number> = {
   "offer-generator-agent": 320,
   "ux-copy-agent": 210,
   "checkout-agent": 190,
-  "merchant-rules-agent": 170,
   "analytics-agent": 220
 };
 
@@ -132,11 +131,17 @@ function inferContext(memory: SharedMemory, g: DataGrounding) {
 }
 
 function generateOffer(memory: SharedMemory, g: DataGrounding, request: RunAgentRequest) {
-  const quietBoost = g.payone.quietScore >= 0.6 ? 8 : 4;
+  const events = Array.isArray(request.input.nearbyEvents) && request.input.nearbyEvents.length > 0 
+    ? request.input.nearbyEvents 
+    : [];
+
+  const merchants = Array.isArray(request.input.nearbyMerchants) && request.input.nearbyMerchants.length > 0 
+    ? request.input.nearbyMerchants 
+    : [g.poi.anchorPoiName];
   
-  // Extract time of day to make offers dynamic
   const hourMatch = memory.time.match(/^(\d{1,2})/);
   const hour = hourMatch ? parseInt(hourMatch[1], 10) : 12;
+  const merchant = merchants[hour % merchants.length];
   
   let timeContext = "snack";
   if (hour < 11) timeContext = "breakfast & coffee";
@@ -145,27 +150,19 @@ function generateOffer(memory: SharedMemory, g: DataGrounding, request: RunAgent
   else if (hour >= 17 && hour < 21) timeContext = "dinner special";
   else timeContext = "late-night bites";
 
-  // Use the expanded nearby events and merchants if available
-  const merchants = Array.isArray(request.input.nearbyMerchants) && request.input.nearbyMerchants.length > 0 
-    ? request.input.nearbyMerchants 
-    : [g.poi.anchorPoiName];
-  
-  const events = Array.isArray(request.input.nearbyEvents) && request.input.nearbyEvents.length > 0 
-    ? request.input.nearbyEvents 
-    : [];
+  if (events.length > 0) {
+    return `Rule: Surge pricing deactivated. High footfall expected due to ${events.length} live event(s) near ${memory.location}. Dynamic discount corridor tightly capped at 5 bp to protect merchant margins.\n\nOffer: Bundle for event attendees — 5% off ${timeContext} at ${merchant}.`;
+  }
 
-  // Pick a merchant deterministically based on the hour
-  const merchant = merchants[hour % merchants.length];
-  
-  const eventAdj = events.length > 0 
-    ? `Bundle for attendees of [${events[0]}]` 
-    : g.localEvent.demandTier === "high" ? "Bundle with festival snack tier" : "Standard city-wallet stack";
+  // Simulated Payone transaction feed — identifying quiet periods and triggering dynamic offers
+  const isQuiet = g.payone.quietScore >= 0.55;
+  const quietBoost = isQuiet ? Math.round(10 + g.payone.quietScore * 10) : 5;
 
   if (memory.mood.toLowerCase().includes("hungry") || g.onDeviceIntent.abstractIntent === "food_now") {
-    return `${eventAdj}: ${quietBoost + 12}% off ${timeContext} at ${merchant} (quiet-period Payone signal).`;
+    return `Simulated Payone feed: ${isQuiet ? "Quiet period detected" : "Standard traffic"}. ${quietBoost}% off ${timeContext} at ${merchant}.`;
   }
   
-  return `${quietBoost + 7}% cashback at ${merchant} and nearby partners (footfall ${g.poi.footfallProxy.toFixed(2)}).`;
+  return `Simulated Payone feed: ${isQuiet ? "Quiet period detected" : "Standard traffic"}. ${quietBoost - 2}% cashback at ${merchant} and nearby partners.`;
 }
 
 function generateUxCopy(memory: SharedMemory, g: DataGrounding) {
@@ -182,24 +179,6 @@ function generateCheckoutToken(memory: SharedMemory, g: DataGrounding) {
     .toUpperCase()
     .slice(0, 36);
   return `CWQR-${compact}`;
-}
-
-function merchantRules(memory: SharedMemory, g: DataGrounding, request: RunAgentRequest) {
-  const quiet = g.payone.quietScore >= 0.55;
-  const isRaining = g.weather.precipMm1h > 0 || memory.weather.toLowerCase().includes("rain");
-  const events = Array.isArray(request.input.nearbyEvents) ? request.input.nearbyEvents : [];
-  
-  let ruleText = "Rule: standard corridor; Payone density within baseline band.";
-  
-  if (events.length > 0) {
-    ruleText = `Rule: Surge pricing deactivated. High footfall expected due to ${events.length} live event(s) near ${memory.location}. Dynamic discount corridor tightly capped at 5 bp to protect merchant margins.`;
-  } else if (quiet && isRaining) {
-    ruleText = `Rule: Payone quietScore ${g.payone.quietScore.toFixed(2)} + ${g.weather.conditionLabel} detected in ${memory.location} → triggering hyper-local bad weather subsidy corridor (+${Math.round(12 + g.payone.quietScore * 10)} bp) to drive indoor footfall.`;
-  } else if (quiet) {
-    ruleText = `Rule: Payone quietScore ${g.payone.quietScore.toFixed(2)} → standard dynamic discount corridor enabled (+${Math.round(6 + g.payone.quietScore * 10)} bp).`;
-  }
-  
-  return ruleText;
 }
 
 function analyticsPrediction(memory: SharedMemory, g: DataGrounding, request: RunAgentRequest) {
@@ -244,9 +223,6 @@ function computeRun(request: RunAgentRequest): Omit<RunAgentResponse, "success" 
       break;
     case "checkout-agent":
       output = `Generated QR token: ${generateCheckoutToken(sharedMemory, g)}`;
-      break;
-    case "merchant-rules-agent":
-      output = merchantRules(sharedMemory, g, request);
       break;
     case "analytics-agent":
       output = analyticsPrediction(sharedMemory, g, request);

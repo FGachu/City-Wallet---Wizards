@@ -4,41 +4,37 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const SOURCE_GROUPS = [
   {
-    title: "Context and location",
+    title: "CONTEXT & LOCATION",
     items: [
       {
-        name: "OpenWeatherMap",
-        detail: "Live and forecast weather by city — primary context trigger (precip, feels-like, wind)."
+        name: "OpenWeatherMap / DWD",
+        detail: "Real-time and forecast weather data by city/location — core context trigger signal."
       },
       {
-        name: "Eventbrite / local event APIs",
-        detail: "Festivals, sports, concerts — demand spike scoring for wallet surfacing."
+        name: "Eventbrite / Local event APIs",
+        detail: "Local event calendars — city festivals, sports events, concerts — for demand spike detection."
       },
       {
         name: "Google Maps Platform / OSM",
-        detail: "POI proximity, footfall proxy, route density — relevance and reachability."
+        detail: "POI data, footfall signals, route density — for proximity and relevance scoring."
       }
     ]
   },
   {
-    title: "Merchant and transactions",
+    title: "MERCHANT & TRANSACTION DATA",
     items: [
       {
-        name: "Payone transaction feed (simulated here)",
-        detail: "Tx density vs baseline per merchant window — quiet periods and dynamic offer triggers (DSV)."
+        name: "Simulated Payone transaction feed",
+        detail: "Simulate or stub Payone transaction density data per merchant — a core DSV asset for identifying quiet periods and triggering dynamic offers."
       }
     ]
   },
   {
-    title: "AI and generative UI",
+    title: "AI & GENERATIVE UI",
     items: [
       {
-        name: "On-device SLMs (Phi-3, Gemma, …)",
-        detail: "Local personalization; only abstract intent + confidence is sent server-side."
-      },
-      {
-        name: "React Native / Flutter GenUI",
-        detail: "Streamed runtime widget trees — offers composed at runtime, not static templates."
+        name: "On-device SLMs (Phi-3, Gemma, etc.)",
+        detail: "Small language models running on-device for GDPR-compliant local personalisation — only an abstract 'intent' signal reaches the server."
       }
     ]
   }

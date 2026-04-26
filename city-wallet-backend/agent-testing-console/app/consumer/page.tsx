@@ -38,21 +38,23 @@ export default function ConsumerLockScreen() {
 
         try {
           // 1. Fetch live contextual data
-          const [placesRes, eventsRes] = await Promise.all([
+          const [placesRes, eventsRes, weatherRes] = await Promise.all([
             fetch(`/api/live-places?lat=${lat}&lon=${lon}`).catch(() => null),
-            fetch(`/api/live-events?lat=${lat}&lon=${lon}`).catch(() => null)
+            fetch(`/api/live-events?lat=${lat}&lon=${lon}`).catch(() => null),
+            fetch(`/api/live-weather?lat=${lat}&lon=${lon}`).catch(() => null)
           ]);
 
           const placesData = placesRes?.ok ? await placesRes.json() : null;
           const eventsData = eventsRes?.ok ? await eventsRes.json() : null;
+          const weatherData = weatherRes?.ok ? await weatherRes.json() : null;
 
           const nearbyMerchants = placesData?.places?.slice(0, 10).map((p: any) => p.name) || ["Local Cafe"];
           const nearbyEvents = eventsData?.events?.map((e: any) => `${e.name} (${e.category}) at ${e.venueName}`) || [];
 
           // 2. Build Memory and Grounding
           const memory = {
-            weather: "rainy",
-            location: "Current Location",
+            weather: weatherData?.description || "rainy",
+            location: weatherData?.city || "Current Location",
             merchantTraffic: "low",
             userIntent: "hungry",
             userName: "Alex",

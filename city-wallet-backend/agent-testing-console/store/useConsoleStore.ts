@@ -93,7 +93,6 @@ function getInitialAgents(): Record<AgentKey, AgentState> {
     "offer-generator-agent": createAgentState("offer-generator-agent"),
     "ux-copy-agent": createAgentState("ux-copy-agent"),
     "checkout-agent": createAgentState("checkout-agent"),
-    "merchant-rules-agent": createAgentState("merchant-rules-agent"),
     "analytics-agent": createAgentState("analytics-agent")
   };
 }
@@ -255,6 +254,20 @@ export const useConsoleStore = create<ConsoleState>((set, get) => ({
                 if (scenarioObj.grounding?.payone) {
                   scenarioObj.grounding.payone.merchantName = topName;
                 }
+                
+                // Fetch simulated Payone data for this merchant
+                try {
+                  const payoneRes = await fetch(`/api/payone-feed?merchant=${encodeURIComponent(topName)}`);
+                  if (payoneRes.ok) {
+                    const payoneData = await payoneRes.json();
+                    if (scenarioObj.grounding) {
+                      scenarioObj.grounding.payone = payoneData;
+                    }
+                  }
+                } catch (e) {
+                  console.error("Failed to fetch payone feed", e);
+                }
+
                 updatedScenario = true;
               }
             }
@@ -290,6 +303,17 @@ export const useConsoleStore = create<ConsoleState>((set, get) => ({
         const res = await fetch(url);
         const data = (await res.json()) as LiveWeatherApiResponse;
         set({ liveWeather: data });
+        
+        // If we successfully fetched weather for a new location via coordinates, 
+        // update the shared memory so the agents know they are in the correct city
+        if (data.ok && data.city) {
+          const currentMem = get().sharedMemory;
+          const updatedMem = { ...currentMem, location: data.city };
+          set({ 
+            sharedMemory: updatedMem,
+            sharedMemoryText: JSON.stringify(updatedMem, null, 2)
+          });
+        }
       } catch {
         set({
           liveWeather: { ok: false, reason: "network", message: "Could not reach weather API." }
