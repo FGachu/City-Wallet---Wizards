@@ -1,14 +1,48 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Building2, MapPin, Navigation } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useLoadScript, Autocomplete } from "@react-google-maps/api";
-
-const libraries: "places"[] = ["places"];
 
 const inputCls =
   "w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500";
+
+type Suggestion = {
+  placeId: string;
+  mainText: string;
+  secondaryText: string;
+  prediction: google.maps.places.PlacePrediction;
+};
+
+let mapsBootstrap: Promise<void> | null = null;
+
+function bootstrapGoogleMaps(apiKey: string): Promise<void> {
+  if (typeof window === "undefined") return Promise.reject(new Error("ssr"));
+  const w = window as unknown as {
+    google?: { maps?: { importLibrary?: unknown } };
+  };
+  if (w.google?.maps?.importLibrary) return Promise.resolve();
+  if (mapsBootstrap) return mapsBootstrap;
+
+  mapsBootstrap = new Promise<void>((resolve, reject) => {
+    const params = new URLSearchParams({
+      key: apiKey,
+      v: "weekly",
+      loading: "async",
+    });
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?${params.toString()}`;
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => {
+      mapsBootstrap = null;
+      reject(new Error("Failed to load Google Maps"));
+    };
+    document.head.appendChild(script);
+  });
+
+  return mapsBootstrap;
+}
 
 export function IdentityCard({
   name,
@@ -21,57 +55,165 @@ export function IdentityCard({
   address: string;
   setAddress: (v: string) => void;
 }) {
-  const { isLoaded } = useLoadScript({
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
-    libraries,
-  });
-
-  const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const [isLocating, setIsLocating] = useState(false);
 
-  const onLoad = (autoC: google.maps.places.Autocomplete) => setAutocomplete(autoC);
-  
-  const onPlaceChanged = () => {
-    if (autocomplete !== null) {
-      const place = autocomplete.getPlace();
-      if (place.formatted_address) {
-        setAddress(place.formatted_address);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
+  const debounceRef = useRef<number | null>(null);
+  const skipFetchRef = useRef(false);
+
+  useEffect(() => {
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    if (!apiKey) return;
+    let cancelled = false;
+    bootstrapGoogleMaps(apiKey)
+      .then(() => {
+        if (!cancelled) setIsLoaded(true);
+      })
+      .catch((e) => console.error("Google Maps load failed", e));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const onClickOutside = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
       }
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (skipFetchRef.current) {
+      skipFetchRef.current = false;
+      return;
+    }
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+
+    if (!isLoaded || !address.trim() || address.trim().length < 2) {
+      setSuggestions([]);
+      setIsOpen(false);
+      return;
+    }
+
+    debounceRef.current = window.setTimeout(async () => {
+      try {
+        const places = (await google.maps.importLibrary(
+          "places",
+        )) as google.maps.PlacesLibrary;
+
+        if (!sessionTokenRef.current) {
+          sessionTokenRef.current = new places.AutocompleteSessionToken();
+        }
+
+        const { suggestions: results } =
+          await places.AutocompleteSuggestion.fetchAutocompleteSuggestions({
+            input: address,
+            sessionToken: sessionTokenRef.current,
+          });
+
+        const mapped: Suggestion[] = results
+          .filter((s) => s.placePrediction)
+          .map((s) => {
+            const p = s.placePrediction!;
+            return {
+              placeId: p.placeId,
+              mainText: p.mainText?.text ?? p.text?.text ?? "",
+              secondaryText: p.secondaryText?.text ?? "",
+              prediction: p,
+            };
+          });
+
+        setSuggestions(mapped);
+        setActiveIndex(-1);
+        setIsOpen(mapped.length > 0);
+      } catch (e) {
+        console.error("Autocomplete error", e);
+        setSuggestions([]);
+      }
+    }, 200);
+
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    };
+  }, [address, isLoaded]);
+
+  const selectSuggestion = async (s: Suggestion) => {
+    try {
+      const place = s.prediction.toPlace();
+      await place.fetchFields({ fields: ["formattedAddress"] });
+      const formatted =
+        place.formattedAddress ||
+        [s.mainText, s.secondaryText].filter(Boolean).join(", ");
+      skipFetchRef.current = true;
+      setAddress(formatted);
+      setIsOpen(false);
+      setSuggestions([]);
+      sessionTokenRef.current = null;
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!isOpen || suggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIndex((i) => (i + 1) % suggestions.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIndex((i) => (i <= 0 ? suggestions.length - 1 : i - 1));
+    } else if (e.key === "Enter" && activeIndex >= 0) {
+      e.preventDefault();
+      selectSuggestion(suggestions[activeIndex]);
+    } else if (e.key === "Escape") {
+      setIsOpen(false);
     }
   };
 
   const handleLiveLocation = () => {
-    if ("geolocation" in navigator) {
-      setIsLocating(true);
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          try {
-            const { latitude, longitude } = position.coords;
-            if (process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
-              const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`);
-              const data = await res.json();
-              if (data.results && data.results.length > 0) {
-                setAddress(data.results[0].formatted_address);
-              } else {
-                setAddress(`${latitude}, ${longitude}`);
-              }
+    if (!("geolocation" in navigator)) return;
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+          if (apiKey) {
+            const res = await fetch(
+              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`,
+            );
+            const data = await res.json();
+            skipFetchRef.current = true;
+            if (data.results?.length > 0) {
+              setAddress(data.results[0].formatted_address);
             } else {
-              setAddress(`Königstraße 12, 70173 Stuttgart (Simulated Live)`); // Simulation since no key provided
+              setAddress(`${latitude}, ${longitude}`);
             }
-          } catch (e) {
-            console.error(e);
-          } finally {
-            setIsLocating(false);
+          } else {
+            skipFetchRef.current = true;
+            setAddress("Königstraße 12, 70173 Stuttgart (Simulated Live)");
           }
-        },
-        (error) => {
-          console.error("Error getting location", error);
+        } catch (e) {
+          console.error(e);
+        } finally {
           setIsLocating(false);
-          // Fallback simulation for hackathon demo if geolocation fails
-          setAddress(`Königstraße 12, 70173 Stuttgart (Simulated Live)`); 
         }
-      );
-    }
+      },
+      (error) => {
+        console.error("Error getting location", error);
+        setIsLocating(false);
+        skipFetchRef.current = true;
+        setAddress("Königstraße 12, 70173 Stuttgart (Simulated Live)");
+      },
+    );
   };
 
   return (
@@ -101,14 +243,14 @@ export function IdentityCard({
             className={inputCls}
           />
         </label>
-        
-        <div className="block relative">
+
+        <div className="block relative" ref={wrapperRef}>
           <div className="text-[11px] uppercase tracking-wider text-ink-500 mb-1 flex justify-between">
             <span>Address</span>
-            <button 
+            <button
               onClick={handleLiveLocation}
               disabled={isLocating}
-              type="button" 
+              type="button"
               className="text-brand-600 hover:text-brand-700 flex items-center gap-1 transition-colors font-medium"
             >
               <Navigation className={cn("size-3", isLocating && "animate-pulse")} />
@@ -117,23 +259,48 @@ export function IdentityCard({
           </div>
           <div className="relative">
             <MapPin className="size-4 text-ink-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
-            
-            {isLoaded && process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ? (
-              <Autocomplete onLoad={onLoad} onPlaceChanged={onPlaceChanged}>
-                <input
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Königstraße 12, 70173 Stuttgart"
-                  className={cn(inputCls, "pl-9")}
-                />
-              </Autocomplete>
-            ) : (
-              <input
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="Königstraße 12, 70173 Stuttgart"
-                className={cn(inputCls, "pl-9")}
-              />
+            <input
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              onFocus={() => suggestions.length > 0 && setIsOpen(true)}
+              onKeyDown={handleKeyDown}
+              placeholder="Königstraße 12, 70173 Stuttgart"
+              className={cn(inputCls, "pl-9")}
+              autoComplete="off"
+              role="combobox"
+              aria-expanded={isOpen}
+              aria-autocomplete="list"
+            />
+            {isOpen && suggestions.length > 0 && (
+              <ul
+                role="listbox"
+                className="absolute z-20 mt-1 left-0 right-0 max-h-72 overflow-auto rounded-lg border border-ink-200 bg-white py-1 shadow-lg shadow-ink-900/5"
+              >
+                {suggestions.map((s, i) => (
+                  <li key={s.placeId} role="option" aria-selected={i === activeIndex}>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        selectSuggestion(s);
+                      }}
+                      onMouseEnter={() => setActiveIndex(i)}
+                      className={cn(
+                        "w-full text-left flex items-start gap-2.5 px-3 py-2 transition-colors",
+                        i === activeIndex ? "bg-brand-50" : "hover:bg-ink-50",
+                      )}
+                    >
+                      <MapPin className="size-3.5 text-ink-400 mt-0.5 shrink-0" />
+                      <span className="text-sm leading-tight">
+                        <span className="font-medium text-ink-800">{s.mainText}</span>
+                        {s.secondaryText && (
+                          <span className="ml-1.5 text-ink-500">{s.secondaryText}</span>
+                        )}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         </div>

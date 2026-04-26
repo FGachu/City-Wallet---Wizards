@@ -403,6 +403,15 @@ type DensityRow = {
   windowMinutes: number;
 };
 
+type DensityStatus = "quiet" | "busy" | "normal" | "closed";
+
+function densityStatus(m: DensityRow): DensityStatus {
+  if (m.expectedTx < 0.1) return "closed";
+  if (m.isQuiet) return "quiet";
+  if (m.quietScore >= 0.4) return "busy";
+  return "normal";
+}
+
 function DensityView({ data }: { data: Record<string, unknown> }) {
   const summary = data.summary as { merchantCount?: number; quietCount?: number; activeOverrides?: Record<string, number> } | undefined;
   const merchants = (data.merchants ?? []) as DensityRow[];
@@ -410,78 +419,208 @@ function DensityView({ data }: { data: Record<string, unknown> }) {
 
   if (!merchants.length) return <Empty>No merchants within radius.</Empty>;
 
+  const grouped = {
+    quiet: merchants.filter((m) => densityStatus(m) === "quiet"),
+    busy: merchants.filter((m) => densityStatus(m) === "busy"),
+    normal: merchants.filter((m) => densityStatus(m) === "normal"),
+    closed: merchants.filter((m) => densityStatus(m) === "closed"),
+  };
+
+  const candidateCount = grouped.quiet.length;
+  const window = query?.windowMinutes ?? "?";
+
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-3 gap-2 text-center">
-        <SummaryCard label="Merchants" value={String(summary?.merchantCount ?? merchants.length)} />
-        <SummaryCard label="Quiet" value={String(summary?.quietCount ?? 0)} highlight={(summary?.quietCount ?? 0) > 0} />
-        <SummaryCard label="Window" value={`${query?.windowMinutes ?? "?"} min`} />
+      <div
+        className={`rounded-lg border p-3.5 ${
+          candidateCount > 0
+            ? "border-red-200 dark:border-red-900/50 bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-950/30 dark:to-orange-950/20"
+            : "border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50"
+        }`}
+      >
+        <div className="text-[10px] uppercase tracking-wider font-semibold text-zinc-500">
+          Offer-engine signal · last {window} min
+        </div>
+        <div
+          className={`text-lg font-semibold mt-0.5 ${
+            candidateCount > 0 ? "text-red-700 dark:text-red-300" : "text-zinc-700 dark:text-zinc-300"
+          }`}
+        >
+          {candidateCount === 0
+            ? "No quiet merchants — nothing to trigger"
+            : `${candidateCount} quiet merchant${candidateCount > 1 ? "s" : ""} → offer candidate${candidateCount > 1 ? "s" : ""}`}
+        </div>
+        <div className="text-xs text-zinc-500 mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+          <span>{merchants.length} in range</span>
+          {grouped.normal.length > 0 ? <span>{grouped.normal.length} normal</span> : null}
+          {grouped.busy.length > 0 ? <span>{grouped.busy.length} busy</span> : null}
+          {grouped.closed.length > 0 ? <span>{grouped.closed.length} outside hours</span> : null}
+        </div>
       </div>
 
       {summary?.activeOverrides && Object.keys(summary.activeOverrides).length ? (
         <div className="rounded-md border border-orange-200 dark:border-orange-900/50 bg-orange-50 dark:bg-orange-950/30 p-2.5 text-xs">
-          <div className="font-semibold text-orange-700 dark:text-orange-300 mb-1">Active overrides</div>
+          <div className="font-semibold text-orange-700 dark:text-orange-300 mb-1">
+            Active scenario overrides
+          </div>
           <div className="space-y-0.5 font-mono text-[11px]">
             {Object.entries(summary.activeOverrides).map(([id, mult]) => (
-              <div key={id}><span className="text-zinc-500">{id}</span> × {mult}</div>
+              <div key={id}>
+                <span className="text-zinc-500">{id}</span> × {mult}{" "}
+                <span className="text-zinc-400">
+                  ({mult < 0.5 ? "forced quiet" : mult > 1.5 ? "forced busy" : "shifted"})
+                </span>
+              </div>
             ))}
           </div>
         </div>
       ) : null}
 
-      <ul className="space-y-2">
-        {merchants.map((m) => {
-          const ratio = m.expectedTx > 0 ? m.actualTx / m.expectedTx : 0;
-          const barPct = Math.min(150, Math.round(ratio * 100));
-          return (
-            <li key={m.id} className={`rounded-md border p-3 ${m.isQuiet ? "border-red-200 dark:border-red-900/50 bg-red-50/40 dark:bg-red-950/20" : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950"}`}>
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className={`w-1.5 h-1.5 rounded-full ${m.isQuiet ? "bg-red-500" : "bg-emerald-500"}`} />
-                    <span className="text-sm font-medium truncate">{m.name}</span>
-                    {m.hasScenarioOverride ? <Badge color="orange">override</Badge> : null}
-                  </div>
-                  <div className="text-[11px] text-zinc-500 mt-0.5">{m.category} · {formatDistance(m.distanceKm)}</div>
-                </div>
-                <div className="text-right">
-                  <div className={`text-xs font-bold ${m.isQuiet ? "text-red-600" : "text-emerald-600"}`}>
-                    {m.isQuiet ? "QUIET" : "OK"}
-                  </div>
-                  <div className="text-[11px] text-zinc-500 tabular-nums">q={m.quietScore}</div>
-                </div>
-              </div>
-              <div className="mt-2.5 space-y-1">
-                <div className="flex items-center justify-between text-[11px] text-zinc-500">
-                  <span>Actual {m.actualTx} tx</span>
-                  <span>Expected {m.expectedTx} tx</span>
-                </div>
-                <div className="relative h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
-                  <div
-                    className={`absolute inset-y-0 left-0 ${m.isQuiet ? "bg-red-500" : "bg-emerald-500"}`}
-                    style={{ width: `${Math.min(100, barPct)}%` }}
-                  />
-                  <div className="absolute inset-y-0 w-px bg-zinc-500/60" style={{ left: "66.6%" }} title="quiet threshold" />
-                </div>
-                <div className="flex items-center justify-between text-[11px] text-zinc-600 dark:text-zinc-400 tabular-nums">
-                  <span>{formatCents(m.actualRevenueCents)}</span>
-                  <span className="text-zinc-400">/ {formatCents(m.expectedRevenueCents)}</span>
-                </div>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+      {grouped.quiet.length > 0 ? (
+        <DensitySection
+          label="Offer candidates"
+          sublabel="Below −40% threshold — engine should generate an offer"
+          tone="red"
+        >
+          {grouped.quiet.map((m) => <DensityCard key={m.id} m={m} status="quiet" />)}
+        </DensitySection>
+      ) : null}
+
+      {grouped.busy.length > 0 ? (
+        <DensitySection label="Above normal" sublabel="No discount needed — venue is doing well" tone="blue">
+          {grouped.busy.map((m) => <DensityCard key={m.id} m={m} status="busy" />)}
+        </DensitySection>
+      ) : null}
+
+      {grouped.normal.length > 0 ? (
+        <DensitySection label="Within normal range" tone="emerald">
+          {grouped.normal.map((m) => <DensityCard key={m.id} m={m} status="normal" />)}
+        </DensitySection>
+      ) : null}
+
+      {grouped.closed.length > 0 ? (
+        <DensitySection label="Outside operating hours" sublabel="Curve = 0 at this time of day" tone="zinc">
+          {grouped.closed.map((m) => <DensityClosedRow key={m.id} m={m} />)}
+        </DensitySection>
+      ) : null}
     </div>
   );
 }
 
-function SummaryCard({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+function DensitySection({
+  label,
+  sublabel,
+  tone,
+  children,
+}: {
+  label: string;
+  sublabel?: string;
+  tone: "red" | "blue" | "emerald" | "zinc";
+  children: React.ReactNode;
+}) {
+  const dot = {
+    red: "bg-red-500",
+    blue: "bg-blue-500",
+    emerald: "bg-emerald-500",
+    zinc: "bg-zinc-400",
+  }[tone];
   return (
-    <div className={`rounded-md border p-2 ${highlight ? "border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30" : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950"}`}>
-      <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">{label}</div>
-      <div className={`text-base font-semibold mt-0.5 ${highlight ? "text-red-700 dark:text-red-400" : ""}`}>{value}</div>
+    <div className="space-y-1.5">
+      <div className="flex items-baseline gap-2 px-0.5">
+        <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />
+        <span className="text-[11px] uppercase tracking-wider font-semibold text-zinc-600 dark:text-zinc-400">
+          {label}
+        </span>
+        {sublabel ? <span className="text-[11px] text-zinc-500">· {sublabel}</span> : null}
+      </div>
+      <ul className="space-y-1.5">{children}</ul>
     </div>
+  );
+}
+
+function DensityCard({ m, status }: { m: DensityRow; status: "quiet" | "busy" | "normal" }) {
+  const deltaPct = Math.round(m.quietScore * 100);
+  const deltaLabel =
+    deltaPct === 0 ? "on target" : `${deltaPct > 0 ? "+" : ""}${deltaPct}% vs normal`;
+
+  const palette = {
+    quiet: { border: "border-red-200 dark:border-red-900/50 bg-red-50/40 dark:bg-red-950/20", text: "text-red-600 dark:text-red-400", fill: "bg-red-500", label: "QUIET" },
+    busy: { border: "border-blue-200 dark:border-blue-900/50 bg-blue-50/40 dark:bg-blue-950/20", text: "text-blue-600 dark:text-blue-400", fill: "bg-blue-500", label: "BUSY" },
+    normal: { border: "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950", text: "text-emerald-600 dark:text-emerald-400", fill: "bg-emerald-500", label: "NORMAL" },
+  }[status];
+
+  const ratio = m.actualTx / Math.max(m.expectedTx, 0.0001);
+  const fillPct = Math.min(100, (ratio / 1.5) * 100);
+  const expectedMarker = (1.0 / 1.5) * 100;
+  const quietMarker = (0.6 / 1.5) * 100;
+
+  return (
+    <li className={`rounded-md border p-3 ${palette.border}`}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-sm font-medium truncate">{m.name}</span>
+            {m.hasScenarioOverride ? <Badge color="orange">override</Badge> : null}
+          </div>
+          <div className="text-[11px] text-zinc-500 mt-0.5">
+            {m.category} · {formatDistance(m.distanceKm)}
+          </div>
+        </div>
+        <div className="text-right shrink-0">
+          <div className={`text-[11px] font-bold tracking-wide ${palette.text}`}>{palette.label}</div>
+          <div className={`text-sm font-semibold tabular-nums ${palette.text}`}>{deltaLabel}</div>
+        </div>
+      </div>
+
+      <div className="mt-3">
+        <div className="relative h-2 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
+          <div className={`absolute inset-y-0 left-0 ${palette.fill}`} style={{ width: `${fillPct}%` }} />
+          <div
+            className="absolute inset-y-0 w-px bg-red-400/70"
+            style={{ left: `${quietMarker}%` }}
+            title="quiet threshold (−40%)"
+          />
+          <div
+            className="absolute inset-y-0 w-px bg-zinc-700 dark:bg-zinc-300"
+            style={{ left: `${expectedMarker}%` }}
+            title="expected (100%)"
+          />
+        </div>
+        <div className="relative h-3 mt-0.5 text-[9px] text-zinc-500 uppercase tracking-wider">
+          <span className="absolute -translate-x-1/2" style={{ left: `${quietMarker}%` }}>quiet</span>
+          <span className="absolute -translate-x-1/2" style={{ left: `${expectedMarker}%` }}>expected</span>
+        </div>
+      </div>
+
+      <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+        <div className="rounded bg-zinc-100 dark:bg-zinc-900 px-2 py-1">
+          <div className="text-zinc-500 text-[10px] uppercase tracking-wider">Actual</div>
+          <div className="font-semibold tabular-nums">
+            {m.actualTx} tx · {formatCents(m.actualRevenueCents)}
+          </div>
+        </div>
+        <div className="rounded bg-zinc-100 dark:bg-zinc-900 px-2 py-1">
+          <div className="text-zinc-500 text-[10px] uppercase tracking-wider">Expected</div>
+          <div className="font-semibold tabular-nums text-zinc-600 dark:text-zinc-400">
+            {m.expectedTx} tx · {formatCents(m.expectedRevenueCents)}
+          </div>
+        </div>
+      </div>
+    </li>
+  );
+}
+
+function DensityClosedRow({ m }: { m: DensityRow }) {
+  return (
+    <li className="rounded-md border border-dashed border-zinc-300 dark:border-zinc-700 bg-zinc-50/60 dark:bg-zinc-900/40 px-3 py-2 flex items-center justify-between gap-2 opacity-70">
+      <div className="min-w-0">
+        <div className="text-sm truncate">{m.name}</div>
+        <div className="text-[11px] text-zinc-500">
+          {m.category} · {formatDistance(m.distanceKm)}
+        </div>
+      </div>
+      <Badge color="zinc">closed at this hour</Badge>
+    </li>
   );
 }
 
