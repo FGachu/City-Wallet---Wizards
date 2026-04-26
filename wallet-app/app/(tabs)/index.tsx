@@ -1,4 +1,4 @@
-import { ScrollView, View, Text, RefreshControl, ActivityIndicator } from "react-native";
+import { ScrollView, View, Text, RefreshControl, ActivityIndicator, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useState, useCallback } from "react";
 import { OfferCard } from "@/components/OfferCard";
@@ -25,9 +25,9 @@ export default function HomeScreen() {
 
   const primary = offers[0]
     ? {
-        ...offers[0],
-        widget: offers[0].widget ? { ...offers[0].widget, variant: "hero" as const } : undefined,
-      }
+      ...offers[0],
+      widget: offers[0].widget ? { ...offers[0].widget, variant: "hero" as const } : undefined,
+    }
     : undefined;
   const others = offers.slice(1).map((o) => ({
     ...o,
@@ -69,6 +69,15 @@ export default function HomeScreen() {
           </Text>
         </View>
 
+        {Platform.OS !== "web" && (
+          <ContextStrip
+            signals={[
+              { icon: "🌧", label: tempLabel },
+              { icon: "✨", label: intentLabel },
+            ]}
+          />
+        )}
+
         {mode === "loading" && !primary && (
           <View style={{ alignItems: "center", padding: 24 }}>
             <ActivityIndicator color={theme.colors.accent} />
@@ -100,25 +109,27 @@ export default function HomeScreen() {
           </View>
         )}
 
-        <View style={{ gap: 8, marginTop: 8 }}>
-          {primary && (
-            <Button
-              label="🔔 Demo: send push in 2s"
-              variant="secondary"
-              onPress={() => fireDemoOfferNotification(primary)}
-            />
-          )}
-          <Text
-            style={{
-              color: theme.colors.textDim,
-              fontSize: 11,
-              textAlign: "center",
-              paddingHorizontal: 20,
-            }}
-          >
-            Background the app, then watch the push arrive.
-          </Text>
-        </View>
+        {Platform.OS !== "web" && (
+          <View style={{ gap: 8, marginTop: 8 }}>
+            {primary && (
+              <Button
+                label="🔔 Demo: send push in 2s"
+                variant="secondary"
+                onPress={() => fireDemoOfferNotification(primary)}
+              />
+            )}
+            <Text
+              style={{
+                color: theme.colors.textDim,
+                fontSize: 11,
+                textAlign: "center",
+                paddingHorizontal: 20,
+              }}
+            >
+              Background the app, then watch the push arrive.
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

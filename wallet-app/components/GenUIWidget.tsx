@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, Text, View, Platform } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { theme } from "@/lib/theme";
 import type { GenUIWidget } from "@/lib/genui/types";
@@ -237,7 +237,7 @@ function HeroWidget({ offer, widget, onPress }: Props) {
           </View>
         ) : null}
 
-        {widget.slots.chips && widget.slots.chips.length > 0 ? (
+        {Platform.OS !== "web" && widget.slots.chips && widget.slots.chips.length > 0 ? (
           <View style={{ marginTop: 18 }}>
             <Chips items={widget.slots.chips} />
           </View>
