@@ -4,9 +4,10 @@ import type { IntentPayload } from "./types";
 type Snapshot = {
   lastIntent: IntentPayload | null;
   lastSentAt: number | null;
+  consentGivenAt: number | null;
 };
 
-let snapshot: Snapshot = { lastIntent: null, lastSentAt: null };
+let snapshot: Snapshot = { lastIntent: null, lastSentAt: null, consentGivenAt: null };
 const listeners = new Set<() => void>();
 
 function notify() {
@@ -26,11 +27,15 @@ function getSnapshot(): Snapshot {
 
 export const privacyStore = {
   setLastIntent(intent: IntentPayload) {
-    snapshot = { lastIntent: intent, lastSentAt: Date.now() };
+    snapshot = { ...snapshot, lastIntent: intent, lastSentAt: Date.now() };
+    notify();
+  },
+  acknowledgeConsent() {
+    snapshot = { ...snapshot, consentGivenAt: Date.now() };
     notify();
   },
   clear() {
-    snapshot = { lastIntent: null, lastSentAt: null };
+    snapshot = { lastIntent: null, lastSentAt: null, consentGivenAt: null };
     notify();
   },
   getSnapshot,

@@ -4,6 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { theme } from "@/lib/theme";
 import { useNotifications } from "@/hooks/useNotifications";
+import { ConsentGate } from "@/components/ConsentGate";
 
 export const unstable_settings = {
   anchor: "(tabs)",
@@ -30,6 +31,7 @@ export default function RootLayout() {
         <Stack.Screen name="redeem/[id]" options={{ title: "Redeem", presentation: "modal" }} />
         <Stack.Screen name="privacy" options={{ title: "Privacy", presentation: "modal" }} />
       </Stack>
+      <ConsentGate />
       <StatusBar style="light" />
     </GestureHandlerRootView>
   );

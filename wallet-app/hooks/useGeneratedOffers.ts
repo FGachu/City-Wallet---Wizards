@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, type Coords } from "@/lib/api";
 import { mockOffers, type Offer } from "@/lib/mockOffers";
 import { distillIntent } from "@/lib/privacy/intentDistiller";
-import { privacyStore } from "@/lib/privacy/store";
+import { privacyStore, useLastIntent } from "@/lib/privacy/store";
 import type { BudgetTier } from "@/lib/privacy/types";
 
 export type OffersMode = "loading" | "live" | "server-fallback" | "offline";
@@ -28,9 +28,10 @@ export function useGeneratedOffers(
   const [mode, setMode] = useState<OffersMode>("loading");
   const [source, setSource] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { consentGivenAt } = useLastIntent();
 
   const run = useCallback(async () => {
-    if (!coords) {
+    if (!coords || !consentGivenAt) {
       setMode("loading");
       return;
     }
@@ -66,7 +67,7 @@ export function useGeneratedOffers(
       setSource(null);
       setMode("offline");
     }
-  }, [coords?.lat, coords?.lon, opts.freeMinutes, opts.budgetTier]);
+  }, [coords?.lat, coords?.lon, opts.freeMinutes, opts.budgetTier, consentGivenAt]);
 
   useEffect(() => {
     run();

@@ -69,6 +69,13 @@ export class ApiError extends Error {
 
 export type Coords = { lat: number; lon: number };
 
+function coarsen(c: Coords): Coords {
+  return {
+    lat: Math.round(c.lat * 1000) / 1000,
+    lon: Math.round(c.lon * 1000) / 1000,
+  };
+}
+
 export type DensityRow = {
   id: string;
   name: string;
@@ -154,19 +161,28 @@ export type GenerateOfferResponse = {
 
 export const api = {
   baseUrl,
-  density: (c: Coords, radiusKm = 1, windowMinutes = 30) =>
-    request<DensityResponse>(
-      `/api/transactions/density?lat=${c.lat}&lon=${c.lon}&radiusKm=${radiusKm}&windowMinutes=${windowMinutes}`,
-    ),
-  weather: (c: Coords) => request<WeatherResponse>(`/api/weather?lat=${c.lat}&lon=${c.lon}`),
-  merchantsNearby: (c: Coords, radiusKm = 1) =>
-    request<MerchantsNearbyResponse>(
-      `/api/merchants/nearby?lat=${c.lat}&lon=${c.lon}&radiusKm=${radiusKm}`,
-    ),
-  events: (c: Coords, radiusKm = 10, size = 50) =>
-    request<EventsResponse>(
-      `/api/events?lat=${c.lat}&lon=${c.lon}&within=${radiusKm}km&size=${size}`,
-    ),
+  density: (c: Coords, radiusKm = 1, windowMinutes = 30) => {
+    const cc = coarsen(c);
+    return request<DensityResponse>(
+      `/api/transactions/density?lat=${cc.lat}&lon=${cc.lon}&radiusKm=${radiusKm}&windowMinutes=${windowMinutes}`,
+    );
+  },
+  weather: (c: Coords) => {
+    const cc = coarsen(c);
+    return request<WeatherResponse>(`/api/weather?lat=${cc.lat}&lon=${cc.lon}`);
+  },
+  merchantsNearby: (c: Coords, radiusKm = 1) => {
+    const cc = coarsen(c);
+    return request<MerchantsNearbyResponse>(
+      `/api/merchants/nearby?lat=${cc.lat}&lon=${cc.lon}&radiusKm=${radiusKm}`,
+    );
+  },
+  events: (c: Coords, radiusKm = 10, size = 50) => {
+    const cc = coarsen(c);
+    return request<EventsResponse>(
+      `/api/events?lat=${cc.lat}&lon=${cc.lon}&within=${radiusKm}km&size=${size}`,
+    );
+  },
   generateOffer: (intent: IntentPayload, merchantIds: string[] = []) =>
     request<GenerateOfferResponse>(`/api/offers/generate`, {
       method: "POST",

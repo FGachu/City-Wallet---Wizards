@@ -22,6 +22,13 @@ const SENT_UPSTREAM = [
   "Optional: free-minutes hint, budget tier",
 ];
 
+const PUBLIC_LOOKUPS = [
+  "Coordinates coarsened to ~110 m before leaving the device",
+  "Used only for nearby weather / merchants / events",
+  "Sent without identity — treated as public lookups",
+  "Server-side caches: 5 min TTL, never persisted",
+];
+
 export default function PrivacyScreen() {
   const { lastIntent, lastSentAt } = useLastIntent();
 
@@ -59,6 +66,12 @@ export default function PrivacyScreen() {
         <Section title="Sent upstream" tone="warn">
           {SENT_UPSTREAM.map((s) => (
             <Bullet key={s} text={s} icon="↗" />
+          ))}
+        </Section>
+
+        <Section title="Public lookups (coords, no identity)" tone="warn">
+          {PUBLIC_LOOKUPS.map((s) => (
+            <Bullet key={s} text={s} icon="📍" />
           ))}
         </Section>
 
