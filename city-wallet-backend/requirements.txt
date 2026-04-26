@@ -1,3 +1,8 @@
 fastapi
 uvicorn[standard]
 openai
+
+# City Wallet PostgreSQL data layer (see ../backend/database/)
+sqlalchemy[asyncio]>=2.0.36,<3
+asyncpg>=0.30.0,<1
+greenlet>=3.0.0,<4

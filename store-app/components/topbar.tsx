@@ -1,18 +1,51 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Bell, Search } from "lucide-react";
+import { Bell, Check, Search } from "lucide-react";
 import { useOnboarding } from "@/lib/onboarding-context";
 import {
   CURRENT_VENUE_UPDATED_EVENT,
   getCurrentVenueAddress,
   getCurrentVenueName,
 } from "@/lib/current-venue";
+import { cn } from "@/lib/utils";
+
+type NotificationItem = {
+  id: string;
+  title: string;
+  detail: string;
+  time: string;
+  unread: boolean;
+};
 
 export default function Topbar() {
   const { completed, hydrated } = useOnboarding();
   const [venueName, setVenueName] = useState("Café Müller");
   const [venueAddress, setVenueAddress] = useState("Stuttgart Innenstadt");
+  const [openNotifications, setOpenNotifications] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([
+    {
+      id: "n1",
+      title: "Offer accepted",
+      detail: "A nearby customer accepted your hot drink bundle.",
+      time: "1 min ago",
+      unread: true,
+    },
+    {
+      id: "n2",
+      title: "Quiet window detected",
+      detail: "Low transaction density in the last 10 minutes.",
+      time: "5 min ago",
+      unread: true,
+    },
+    {
+      id: "n3",
+      title: "Campaign healthy",
+      detail: "Acceptance rate is up by 4pp vs. yesterday.",
+      time: "12 min ago",
+      unread: false,
+    },
+  ]);
 
   useEffect(() => {
     const updateFromCurrentVenue = () => {
@@ -60,6 +93,16 @@ export default function Topbar() {
       .join("") || "CW";
   }, [venueName]);
 
+  const unreadCount = notifications.filter((item) => item.unread).length;
+
+  const markAllRead = () => {
+    setNotifications((prev) => prev.map((item) => ({ ...item, unread: false })));
+  };
+
+  const toggleNotifications = () => {
+    setOpenNotifications((prev) => !prev);
+  };
+
   if (!hydrated || !completed) return null;
 
   return (
@@ -89,9 +132,70 @@ export default function Topbar() {
           Live · accepting offers
         </div>
 
-        <button className="size-9 rounded-full border border-ink-200 grid place-items-center hover:bg-ink-50 transition">
-          <Bell className="size-4 text-ink-600" />
-        </button>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={toggleNotifications}
+            className={cn(
+              "size-9 rounded-full border grid place-items-center transition relative",
+              openNotifications
+                ? "border-brand-300 bg-brand-50"
+                : "border-ink-200 hover:bg-ink-50"
+            )}
+          >
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-brand-600 text-white text-[10px] leading-4 font-semibold">
+                {Math.min(unreadCount, 9)}
+              </span>
+            )}
+            <Bell className="size-4 text-ink-600" />
+          </button>
+
+          {openNotifications && (
+            <div className="absolute right-0 top-11 w-80 rounded-xl border border-ink-200 bg-white shadow-xl shadow-ink-900/10 z-40">
+              <div className="px-3 py-2.5 border-b border-ink-100 flex items-center justify-between">
+                <div className="text-sm font-semibold text-ink-800">
+                  Notifications
+                </div>
+                <button
+                  type="button"
+                  onClick={markAllRead}
+                  className="text-xs text-brand-600 hover:text-brand-700 font-medium inline-flex items-center gap-1"
+                >
+                  <Check className="size-3.5" />
+                  Mark all read
+                </button>
+              </div>
+              <div className="max-h-80 overflow-auto py-1">
+                {notifications.map((item) => (
+                  <div
+                    key={item.id}
+                    className="px-3 py-2.5 border-b border-ink-100/80 last:border-b-0"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          {item.unread && (
+                            <span className="size-1.5 rounded-full bg-brand-500 shrink-0 mt-1" />
+                          )}
+                          <div className="text-xs font-semibold text-ink-800">
+                            {item.title}
+                          </div>
+                        </div>
+                        <div className="text-xs text-ink-500 mt-1 leading-relaxed">
+                          {item.detail.replace("your", venueName)}
+                        </div>
+                      </div>
+                      <div className="text-[11px] text-ink-400 shrink-0">
+                        {item.time}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
 
         <div className="size-9 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 grid place-items-center text-white text-xs font-semibold shadow-sm">
           {initials}

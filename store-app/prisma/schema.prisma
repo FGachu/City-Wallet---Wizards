@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model ConsoleState {
+  id                 Int     @id
+  onboardingComplete Boolean @default(false)
+  lastVisitedPath    String  @default("/")
+  updatedAt          DateTime @updatedAt
+}
+
+model MerchantSettings {
+  id              Int     @id
+  venueName       String
+  address         String
+  payoutIban      String
+  payoneMerchantId String
+  allowPushOffers Boolean @default(true)
+  allowSmsFallback Boolean @default(false)
+  privacyMode     String  @default("balanced")
+  updatedAt       DateTime @updatedAt
+}
+
+model Merchant {
+  id       Int     @id @default(autoincrement())
+  name     String
+  category String
+  lat      Float
+  lon      Float
+  isActive Boolean @default(true) @map("is_active")
+
+  items         Item[]
+  discountRules DiscountRule[]
+
+  @@index([isActive])
+  @@map("merchants")
+}
+
+model Item {
+  id           Int      @id @default(autoincrement())
+  merchantId   Int      @map("merchant_id")
+  name         String
+  category     String
+  basePrice    Float    @map("base_price")
+  isPerishable Boolean  @default(false) @map("is_perishable")
+  isHighMargin Boolean  @default(false) @map("is_high_margin")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  merchant       Merchant       @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  inventory      Inventory?
+  discountRules  DiscountRule[]
+
+  @@index([merchantId])
+  @@index([category])
+  @@map("items")
+}
+
+model DiscountRule {
+  id                 Int              @id @default(autoincrement())
+  merchantId         Int              @map("merchant_id")
+  itemId             Int?             @map("item_id")
+  maxDiscountPercent Float            @map("max_discount_percent")
+  ruleType           DiscountRuleType @map("rule_type")
+  condition          Json?
+  startTime          DateTime?        @map("start_time")
+  endTime            DateTime?        @map("end_time")
+  createdAt          DateTime         @default(now()) @map("created_at")
+
+  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  item     Item?    @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([merchantId])
+  @@index([itemId])
+  @@map("discount_rules")
+}
+
+model Inventory {
+  id          Int             @id @default(autoincrement())
+  itemId      Int             @unique @map("item_id")
+  stockCount  Int             @default(0) @map("stock_count")
+  status      InventoryStatus @default(in_stock)
+  lastUpdated DateTime        @updatedAt @map("last_updated")
+
+  item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@map("inventory")
+}
+
+enum InventoryStatus {
+  in_stock
+  low_stock
+  out_of_stock
+}
+
+enum DiscountRuleType {
+  GLOBAL
+  ITEM
+  TIME_BASED
+}
