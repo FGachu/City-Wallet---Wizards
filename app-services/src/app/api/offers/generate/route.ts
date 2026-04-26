@@ -179,6 +179,7 @@ function buildPrompt(intent: IntentPayload, merchants: RegisteredMerchant[]): st
     merchantId: m.id,
     merchantName: m.name,
     category: m.category,
+    cuisine: m.cuisine ?? null,
     products: m.products
       .filter((p) => p.enabled)
       .map((p) => ({
@@ -198,7 +199,9 @@ MERCHANT CANDIDATES (with rules and products):
 ${JSON.stringify(merchantSummaries, null, 2)}
 
 Rules:
-- discountPct must be > 0 and <= the merchant's product.maxDiscountPct AND <= rules.maxDiscountPct.
+- IMPORTANT: pick a productName ONLY from the merchant's products[] list. Do not invent dishes that don't fit the cuisine — e.g. never suggest pizza at an Indian restaurant.
+- The productName, originalCents and maxDiscountPct in your output MUST match one of the products provided for that merchant.
+- discountPct must be > 0 and <= the chosen product's maxDiscountPct AND <= rules.maxDiscountPct.
 - emotionalHeadline: short (max 60 chars), addresses the intent emotionally — e.g. "Cold outside? Your cappuccino is waiting."
 - factualSummary: short (max 80 chars), states product + % off + merchant — e.g. "20% off cappuccino at Café Müller."
 - contextSignals: array of 2-3 short strings explaining the timing — e.g. ["10 °C drizzle", "Quiet right now"].
@@ -289,7 +292,7 @@ export async function POST(request: NextRequest) {
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: process.env.GEMINI_MODEL ?? "gemini-flash-latest",
       generationConfig: { responseMimeType: "application/json" },
     });
     const result = await model.generateContent(buildPrompt(intent, merchants));

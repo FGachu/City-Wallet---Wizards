@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const merchants = findMerchantsNearby(latNum, lonNum, radiusKm).map((n) => n.merchant);
+  const merchants = (await findMerchantsNearby(latNum, lonNum, radiusKm)).map((n) => n.merchant);
 
   const densities = queryDensity(merchants, {
     lat: latNum,

@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
     category = categoryParam as MerchantCategory;
   }
 
-  const results = findMerchantsNearby(latNum, lonNum, radiusKm, category);
+  const results = await findMerchantsNearby(latNum, lonNum, radiusKm, category);
 
   return NextResponse.json(
     {

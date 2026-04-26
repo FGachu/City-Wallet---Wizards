@@ -1,4 +1,5 @@
 import type { Merchant, MerchantCategory } from "@/lib/payone/types";
+import { discoverMerchantsNearby, getCachedMerchant } from "@/lib/merchants/discovery";
 
 export type ProductCategory =
   | "Drinks"
@@ -32,6 +33,7 @@ export type MerchantRules = {
 
 export type RegisteredMerchant = Merchant & {
   address: string;
+  cuisine?: string | null;
   products: MerchantProduct[];
   quietWindows: QuietWindowId[];
   rules: MerchantRules;
@@ -600,19 +602,42 @@ export function listMerchants(): RegisteredMerchant[] {
 }
 
 export function getMerchantById(id: string): RegisteredMerchant | null {
+  if (id.startsWith("mer_g_")) return getCachedMerchant(id);
   return SEED.find((m) => m.id === id) ?? null;
 }
 
-export function findMerchantsNearby(
+export async function findMerchantsNearby(
   lat: number,
   lon: number,
   radiusKm: number,
   category?: MerchantCategory,
-): NearbyMerchant[] {
+): Promise<NearbyMerchant[]> {
+  const types = category ? categoryToTypes(category) : undefined;
+  const discovered = await discoverMerchantsNearby(lat, lon, radiusKm, types);
+  if (discovered.length > 0) {
+    return category
+      ? discovered.filter(({ merchant }) => merchant.category === category)
+      : discovered;
+  }
   return SEED.filter((m) => !category || m.category === category)
     .map((m) => ({ merchant: m, distanceKm: haversineKm(lat, lon, m.lat, m.lon) }))
     .filter(({ distanceKm }) => distanceKm <= radiusKm)
     .sort((a, b) => a.distanceKm - b.distanceKm);
+}
+
+function categoryToTypes(category: MerchantCategory): string[] {
+  switch (category) {
+    case "cafe":
+      return ["cafe", "coffee_shop"];
+    case "restaurant":
+      return ["restaurant", "meal_takeaway"];
+    case "bakery":
+      return ["bakery"];
+    case "bar":
+      return ["bar", "pub", "wine_bar"];
+    case "retail":
+      return ["store"];
+  }
 }
 
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
