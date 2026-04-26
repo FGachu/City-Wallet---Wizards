@@ -26,10 +26,10 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen
           name="offer/[id]"
-          options={{ presentation: "modal", title: "Offer" }}
+          options={{ presentation: "fullScreenModal", title: "Offer" }}
         />
-        <Stack.Screen name="redeem/[id]" options={{ title: "Redeem", presentation: "modal" }} />
-        <Stack.Screen name="privacy" options={{ title: "Privacy", presentation: "modal" }} />
+        <Stack.Screen name="redeem/[id]" options={{ title: "Redeem", presentation: "fullScreenModal" }} />
+        <Stack.Screen name="privacy" options={{ title: "Privacy", presentation: "fullScreenModal" }} />
       </Stack>
       <ConsentGate />
       <StatusBar style="light" />

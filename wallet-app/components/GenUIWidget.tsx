@@ -346,14 +346,12 @@ function StickerWidget({ offer, widget, onPress }: Props) {
       onPress={onPress}
       style={({ pressed }) => ({
         opacity: pressed ? 0.85 : 1,
-        alignSelf: "flex-start",
         flexDirection: "row",
-        gap: 8,
+        gap: 12,
         alignItems: "center",
         backgroundColor: accent,
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        borderRadius: 4,
+        padding: 14,
+        borderRadius: 8,
         borderWidth: 1.5,
         borderColor: theme.colors.bg,
         shadowColor: accent,
@@ -362,19 +360,19 @@ function StickerWidget({ offer, widget, onPress }: Props) {
         shadowRadius: 0,
       })}
     >
-      <Text style={{ fontSize: 18 }}>{widget.slots.emoji ?? offer.imageEmoji}</Text>
-      <Text style={{ color: theme.colors.bg, fontSize: 13, fontWeight: "900", letterSpacing: -0.2 }}>
+      <Text style={{ fontSize: 26 }}>{widget.slots.emoji ?? offer.imageEmoji}</Text>
+      <Text style={{ flex: 1, color: theme.colors.bg, fontSize: 14, fontWeight: "900", letterSpacing: -0.2 }}>
         {widget.slots.headline}
       </Text>
       <View
         style={{
           backgroundColor: theme.colors.bg,
           borderRadius: 4,
-          paddingVertical: 3,
-          paddingHorizontal: 8,
+          paddingVertical: 6,
+          paddingHorizontal: 10,
         }}
       >
-        <Text style={{ color: accent, fontSize: 10, fontWeight: "900", textTransform: "uppercase" }}>
+        <Text style={{ color: accent, fontSize: 11, fontWeight: "900", textTransform: "uppercase" }}>
           {widget.slots.ctaText}
         </Text>
       </View>
@@ -392,8 +390,7 @@ function BannerWidget({ offer, widget, onPress }: Props) {
         flexDirection: "row",
         alignItems: "center",
         gap: 12,
-        paddingVertical: 12,
-        paddingHorizontal: 16,
+        padding: 14,
         backgroundColor: widget.palette.surface ?? theme.colors.cardElevated,
         borderWidth: 1.5,
         borderColor: theme.colors.border,
@@ -404,8 +401,8 @@ function BannerWidget({ offer, widget, onPress }: Props) {
     >
       <View
         style={{
-          width: 40,
-          height: 40,
+          width: 44,
+          height: 44,
           borderRadius: 6,
           backgroundColor: accent + "15",
           borderWidth: 1,
@@ -414,7 +411,7 @@ function BannerWidget({ offer, widget, onPress }: Props) {
           justifyContent: "center",
         }}
       >
-        <Text style={{ fontSize: 20 }}>{widget.slots.emoji ?? offer.imageEmoji}</Text>
+        <Text style={{ fontSize: 22 }}>{widget.slots.emoji ?? offer.imageEmoji}</Text>
       </View>
       <View style={{ flex: 1 }}>
         {widget.slots.kicker ? (
