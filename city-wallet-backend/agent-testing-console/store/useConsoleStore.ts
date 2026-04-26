@@ -217,15 +217,102 @@ export const useConsoleStore = create<ConsoleState>((set, get) => ({
     });
   },
   fetchLiveWeather: async () => {
-    const city = get().sharedMemory.location?.trim() || "Stuttgart";
-    try {
-      const res = await fetch(`/api/live-weather?q=${encodeURIComponent(city)}`);
-      const data = (await res.json()) as LiveWeatherApiResponse;
-      set({ liveWeather: data });
-    } catch {
-      set({
-        liveWeather: { ok: false, reason: "network", message: "Could not reach weather API." }
-      });
+    const fetchWeather = async (lat?: number, lon?: number) => {
+      const city = get().sharedMemory.location?.trim() || "Stuttgart";
+      let url = `/api/live-weather?q=${encodeURIComponent(city)}`;
+      if (lat !== undefined && lon !== undefined) {
+        url = `/api/live-weather?lat=${lat}&lon=${lon}`;
+        
+        // Fetch real nearby restaurants and events
+        try {
+          const [placesRes, eventsRes] = await Promise.all([
+            fetch(`/api/live-places?lat=${lat}&lon=${lon}`).catch(() => null),
+            fetch(`/api/live-events?lat=${lat}&lon=${lon}`).catch(() => null)
+          ]);
+
+          let updatedScenario = false;
+          const currentScenarioText = get().scenarioInputText;
+          let scenarioObj: any = null;
+
+          try {
+            scenarioObj = JSON.parse(currentScenarioText);
+          } catch (e) {
+            // Ignore parse errors if user has invalid JSON
+          }
+
+          if (scenarioObj) {
+            if (placesRes && placesRes.ok) {
+              const placesData = await placesRes.json();
+              if (placesData.places && Array.isArray(placesData.places) && placesData.places.length > 0) {
+                const topMerchants = placesData.places.slice(0, 10).map((p: any) => p.name);
+                scenarioObj.nearbyMerchants = topMerchants;
+                
+                // Update the anchor POI and merchant name to match the first live restaurant
+                const topName = topMerchants[0] || "Unknown Merchant";
+                if (scenarioObj.grounding?.poi) {
+                  scenarioObj.grounding.poi.anchorPoiName = topName;
+                }
+                if (scenarioObj.grounding?.payone) {
+                  scenarioObj.grounding.payone.merchantName = topName;
+                }
+                updatedScenario = true;
+              }
+            }
+
+            if (eventsRes && eventsRes.ok) {
+              const eventsData = await eventsRes.json();
+              if (eventsData.events && Array.isArray(eventsData.events) && eventsData.events.length > 0) {
+                scenarioObj.nearbyEvents = eventsData.events.map((e: any) => `${e.name} (${e.category}) at ${e.venueName}`);
+                const topEvent = eventsData.events[0];
+                if (scenarioObj.grounding?.localEvent) {
+                  scenarioObj.grounding.localEvent.provider = "ticketmaster";
+                  scenarioObj.grounding.localEvent.eventId = topEvent.id;
+                  scenarioObj.grounding.localEvent.title = topEvent.name;
+                  scenarioObj.grounding.localEvent.category = topEvent.category || "Event";
+                  scenarioObj.grounding.localEvent.venueName = topEvent.venueName || "Local Venue";
+                  scenarioObj.grounding.localEvent.startLocal = topEvent.startLocal;
+                  scenarioObj.grounding.localEvent.distanceM = topEvent.distanceM;
+                  updatedScenario = true;
+                }
+              }
+            }
+
+            if (updatedScenario) {
+              set({ scenarioInputText: JSON.stringify(scenarioObj, null, 2) });
+            }
+          }
+        } catch (err) {
+          console.error("Failed to fetch live context data", err);
+        }
+      }
+      
+      try {
+        const res = await fetch(url);
+        const data = (await res.json()) as LiveWeatherApiResponse;
+        set({ liveWeather: data });
+      } catch {
+        set({
+          liveWeather: { ok: false, reason: "network", message: "Could not reach weather API." }
+        });
+      }
+    };
+
+    if (typeof navigator !== "undefined" && "geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => fetchWeather(position.coords.latitude, position.coords.longitude),
+        (error) => {
+          if (error.code === error.PERMISSION_DENIED) {
+            alert("Location access is required for live data. Please click the lock icon in your address bar to allow location access, then refresh.");
+            set({
+              liveWeather: { ok: false, reason: "network", message: "Location access denied. Please enable location to continue." }
+            });
+          } else {
+            fetchWeather(); // fallback if timeout or other error occurs
+          }
+        }
+      );
+    } else {
+      fetchWeather();
     }
   }
 }));

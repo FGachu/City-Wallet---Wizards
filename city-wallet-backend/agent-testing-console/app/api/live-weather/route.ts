@@ -3,7 +3,10 @@ import type { LiveWeatherApiResponse } from "@/lib/live-weather";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
-  const q = new URL(req.url).searchParams.get("q")?.trim() || "Stuttgart";
+  const searchParams = new URL(req.url).searchParams;
+  const q = searchParams.get("q")?.trim();
+  const lat = searchParams.get("lat")?.trim();
+  const lon = searchParams.get("lon")?.trim();
   const key = process.env.OPENWEATHERMAP_API_KEY?.trim();
 
   if (!key) {
@@ -16,7 +19,12 @@ export async function GET(req: Request) {
   }
 
   const url = new URL("https://api.openweathermap.org/data/2.5/weather");
-  url.searchParams.set("q", q);
+  if (lat && lon) {
+    url.searchParams.set("lat", lat);
+    url.searchParams.set("lon", lon);
+  } else {
+    url.searchParams.set("q", q || "Stuttgart");
+  }
   url.searchParams.set("units", "metric");
   url.searchParams.set("appid", key);
 

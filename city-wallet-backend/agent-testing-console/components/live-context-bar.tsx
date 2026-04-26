@@ -9,12 +9,13 @@ import { useConsoleStore } from "@/store/useConsoleStore";
 const WEATHER_POLL_MS = 5 * 60 * 1000;
 
 export function LiveContextBar() {
-  const [nowLabel, setNowLabel] = useState(() => formatLocalDateTimeLabel());
+  const [nowLabel, setNowLabel] = useState<string>("");
   const location = useConsoleStore((s) => s.sharedMemory.location);
   const liveWeather = useConsoleStore((s) => s.liveWeather);
   const fetchLiveWeather = useConsoleStore((s) => s.fetchLiveWeather);
 
   useEffect(() => {
+    setNowLabel(formatLocalDateTimeLabel());
     const id = window.setInterval(() => setNowLabel(formatLocalDateTimeLabel()), 1000);
     return () => window.clearInterval(id);
   }, []);
