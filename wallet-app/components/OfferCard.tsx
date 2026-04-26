@@ -3,6 +3,7 @@ import { View, Text, Pressable } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { theme } from "@/lib/theme";
 import type { Offer } from "@/lib/mockOffers";
+import { GenUIWidgetView } from "@/components/GenUIWidget";
 
 function nextSimulatedWindowMs() {
   // 8–22 min so demos always show an active, plausible window.
@@ -37,6 +38,13 @@ function useCountdown(expiresAt: string) {
 }
 
 export function OfferCard({ offer, onPress }: { offer: Offer; onPress?: () => void }) {
+  if (offer.widget) {
+    return <GenUIWidgetView offer={offer} widget={offer.widget} onPress={onPress} />;
+  }
+  return <LegacyOfferCard offer={offer} onPress={onPress} />;
+}
+
+function LegacyOfferCard({ offer, onPress }: { offer: Offer; onPress?: () => void }) {
   const cd = useCountdown(offer.expiresAt);
   const expiringSoon = cd.ms < 5 * 60_000;
 

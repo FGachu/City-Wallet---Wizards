@@ -142,26 +142,98 @@ const FALLBACK_PRODUCT = {
   accent: "#C97A4B",
 };
 
-function buildFallbackOffer(merchant: RegisteredMerchant, intent: IntentPayload): Offer {
-  const product = merchant.products.find((p) => p.enabled) ?? null;
+const PRODUCT_VISUAL: Record<string, { emoji: string; accent: string }> = {
+  Drinks: { emoji: "☕️", accent: "#C97A4B" },
+  Pastries: { emoji: "🥐", accent: "#D9A93B" },
+  Mains: { emoji: "🍝", accent: "#B85C3A" },
+  Desserts: { emoji: "🍰", accent: "#D26B8A" },
+  Other: { emoji: "🍽️", accent: "#7C8B9A" },
+};
+
+const CATEGORY_VISUAL: Record<string, { emoji: string; accent: string }> = {
+  cafe: { emoji: "☕️", accent: "#C97A4B" },
+  bakery: { emoji: "🥨", accent: "#D9A93B" },
+  restaurant: { emoji: "🍽️", accent: "#B85C3A" },
+  bar: { emoji: "🍷", accent: "#7B3F5E" },
+  retail: { emoji: "🛍️", accent: "#5C7C9A" },
+};
+
+const HEADLINE_TEMPLATES: Record<string, string[]> = {
+  "warm-comfort": [
+    "Cold outside? Cozy break inside.",
+    "Warm up with something nearby.",
+    "A warm bite for a chilly hour.",
+  ],
+  "quick-bite": [
+    "Twelve minutes? Perfect timing.",
+    "Quick bite, just around the corner.",
+    "Lunch on the move — sorted.",
+  ],
+  "cozy-treat": [
+    "A small treat to slow down for.",
+    "Pause. Treat yourself, briefly.",
+    "Tiny indulgence, big lift.",
+  ],
+  "casual-browse": [
+    "Something nice while you wander.",
+    "Drop by — they're quiet right now.",
+    "Worth a short detour today.",
+  ],
+  "post-work-unwind": [
+    "Day's done — let's unwind.",
+    "Soft landing after work.",
+    "Trade the laptop for a glass.",
+  ],
+  "weekend-explore": [
+    "Weekend find, steps from here.",
+    "Local favourite, your turn.",
+    "Wander in, stay a while.",
+  ],
+};
+
+function visualFor(merchant: RegisteredMerchant, product: { category?: string } | null) {
+  const fromProduct = product?.category ? PRODUCT_VISUAL[product.category] : null;
+  return fromProduct ?? CATEGORY_VISUAL[merchant.category] ?? FALLBACK_PRODUCT;
+}
+
+function pickProduct(merchant: RegisteredMerchant, index: number) {
+  const enabled = merchant.products.filter((p) => p.enabled);
+  if (enabled.length === 0) return null;
+  return enabled[index % enabled.length];
+}
+
+function pickHeadline(intent: IntentPayload, index: number): string {
+  const pool = HEADLINE_TEMPLATES[intent.intentCategory] ?? HEADLINE_TEMPLATES["casual-browse"];
+  return pool[index % pool.length];
+}
+
+function buildFallbackOffer(
+  merchant: RegisteredMerchant,
+  intent: IntentPayload,
+  index: number,
+): Offer {
+  const product = pickProduct(merchant, index);
   const priceCents = product?.priceCents ?? FALLBACK_PRODUCT.priceCents;
-  const discountPct = Math.min(merchant.rules.maxDiscountPct, 15);
+  const productMaxPct = product?.maxDiscountPct ?? 20;
+  const discountPct = Math.min(merchant.rules.maxDiscountPct, productMaxPct, 10 + (index % 3) * 5);
   const finalCents = Math.round(priceCents * (1 - discountPct / 100));
+  const visual = visualFor(merchant, product);
+  const productName = product?.name ?? FALLBACK_PRODUCT.name;
   return {
-    id: `off_${merchant.id}_${Date.now().toString(36)}`,
+    id: `off_${merchant.id}_${Date.now().toString(36)}_${index}`,
     merchantId: merchant.id,
     merchantName: merchant.name,
-    productName: product?.name ?? FALLBACK_PRODUCT.name,
-    emotionalHeadline: `A small treat for a ${intent.weather.tempBucket} ${intent.timeBucket}.`,
-    factualSummary: `${discountPct}% off ${product?.name ?? FALLBACK_PRODUCT.name} at ${merchant.name}.`,
+    productName,
+    emotionalHeadline: pickHeadline(intent, index),
+    factualSummary: `${discountPct}% off ${productName} at ${merchant.name}.`,
     discountPct,
     originalCents: priceCents,
     finalCents,
-    expiresAt: new Date(Date.now() + 12 * 60_000).toISOString(),
-    distanceM: 250,
+    expiresAt: new Date(Date.now() + (8 + (index % 4) * 4) * 60_000).toISOString(),
+    distanceM: 120 + (index % 5) * 95,
     contextSignals: [intent.weather.condition, intent.density, intent.intentCategory],
-    imageEmoji: FALLBACK_PRODUCT.emoji,
-    accentColor: FALLBACK_PRODUCT.accent,
+    imageEmoji: visual.emoji,
+    accentColor: visual.accent,
   };
 }
 
@@ -282,7 +354,7 @@ export async function POST(request: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
-    const offers = merchants.map((m) => buildFallbackOffer(m, intent));
+    const offers = merchants.map((m, i) => buildFallbackOffer(m, intent, i));
     return NextResponse.json(
       { offers, source: "fallback.no-gemini-key" },
       { headers: CORS_HEADERS },
@@ -306,7 +378,7 @@ export async function POST(request: NextRequest) {
     if (offers.length === 0) throw new Error("Gemini returned no offers");
     return NextResponse.json({ offers, source: "gemini" }, { headers: CORS_HEADERS });
   } catch (err) {
-    const fallback = merchants.map((m) => buildFallbackOffer(m, intent));
+    const fallback = merchants.map((m, i) => buildFallbackOffer(m, intent, i));
     return NextResponse.json(
       {
         offers: fallback,

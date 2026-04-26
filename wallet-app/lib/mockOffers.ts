@@ -6,6 +6,8 @@ If we don't have any generated offers, we'll use these mock offers.
 */
 
 
+import type { GenUIWidget } from "@/lib/genui/types";
+
 export type Offer = {
   id: string;
   merchantId: string;
@@ -21,6 +23,7 @@ export type Offer = {
   contextSignals: string[];
   imageEmoji: string;
   accentColor: string;
+  widget?: GenUIWidget;
 };
 
 const inMinutes = (m: number) => new Date(Date.now() + m * 60_000).toISOString();
