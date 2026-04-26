@@ -1,4 +1,4 @@
-import { View, Text } from "react-native";
+import { View, Text, Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
 import { theme } from "@/lib/theme";
@@ -14,6 +14,9 @@ export default function RedeemScreen() {
   )
     .toString(36)
     .toUpperCase()}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=480x480&margin=8&data=${encodeURIComponent(
+    token,
+  )}`;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.bg }} edges={["bottom"]}>
@@ -36,23 +39,15 @@ export default function RedeemScreen() {
             alignItems: "center",
             justifyContent: "center",
             marginTop: 16,
+            padding: 12,
           }}
         >
-          {/* Placeholder QR — in production: react-native-qrcode-svg encodes `token` */}
-          <View
-            style={{
-              width: 200,
-              height: 200,
-              backgroundColor: theme.colors.bg,
-              borderRadius: 6,
-              alignItems: "center",
-              justifyContent: "center",
-              borderWidth: 1,
-              borderColor: theme.colors.border,
-            }}
-          >
-            <Text style={{ color: theme.colors.accent, fontSize: 13, fontWeight: "900", letterSpacing: 1 }}>QR PLACEHOLDER</Text>
-          </View>
+          <Image
+            source={{ uri: qrUrl }}
+            style={{ width: 216, height: 216 }}
+            resizeMode="contain"
+            accessibilityLabel={`QR code encoding ${token}`}
+          />
         </View>
 
         <View

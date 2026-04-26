@@ -90,6 +90,7 @@ function CountdownPill({
         }}
       />
       <Text
+        allowFontScaling={false}
         style={{
           color: expiringSoon || tone === "urgent" ? "#fff" : theme.colors.textMuted,
           fontSize: size === "sm" ? 10 : 12,
@@ -106,13 +107,14 @@ function CountdownPill({
 function PriceLine({ offer, accent }: { offer: Offer; accent: string }) {
   return (
     <View style={{ flexDirection: "row", alignItems: "baseline", gap: 12 }}>
-      <Text style={{ color: accent, fontSize: 28, fontWeight: "900", letterSpacing: -1 }}>
+      <Text allowFontScaling={false} style={{ color: accent, fontSize: 26, fontWeight: "900", letterSpacing: -1 }}>
         €{(offer.finalCents / 100).toFixed(2)}
       </Text>
       <Text
+        allowFontScaling={false}
         style={{
           color: theme.colors.textDim,
-          fontSize: 15,
+          fontSize: 14,
           textDecorationLine: "line-through",
           fontWeight: "600",
         }}
@@ -127,7 +129,7 @@ function PriceLine({ offer, accent }: { offer: Offer; accent: string }) {
           paddingVertical: 2,
         }}
       >
-        <Text style={{ color: theme.colors.bg, fontSize: 11, fontWeight: "900", textTransform: "uppercase" }}>
+        <Text allowFontScaling={false} style={{ color: theme.colors.bg, fontSize: 11, fontWeight: "900", textTransform: "uppercase" }}>
           SAVE {offer.discountPct}%
         </Text>
       </View>
@@ -135,46 +137,33 @@ function PriceLine({ offer, accent }: { offer: Offer; accent: string }) {
   );
 }
 
-function Chips({ items }: { items: string[] }) {
-  return (
-    <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-      {items.map((s, i) => (
-        <View
-          key={`${s}-${i}`}
-          style={{
-            borderWidth: 1,
-            borderColor: theme.colors.border,
-            borderRadius: 4,
-            paddingVertical: 4,
-            paddingHorizontal: 8,
-            backgroundColor: theme.colors.bg,
-          }}
-        >
-          <Text style={{ color: theme.colors.textMuted, fontSize: 10, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5 }}>
-            {s}
-          </Text>
-        </View>
-      ))}
-    </View>
-  );
+function pickHeroKicker(offer: Offer, tone: string): string {
+  const sig = (offer.contextSignals ?? []).find((s) => s && s.length <= 30);
+  if (sig) return sig;
+  if (tone === "urgent") return "Right now";
+  if (tone === "playful") return "Just for you";
+  if (tone === "factual") return "Nearby deal";
+  return "Tuned to you";
 }
 
 function HeroWidget({ offer, widget, onPress }: Props) {
   const accent = widget.palette.accent;
+  const kicker = widget.slots.kicker || pickHeroKicker(offer, widget.tone);
+  const subhead = widget.slots.subhead || offer.factualSummary;
   return (
     <Pressable
       onPress={onPress}
       style={{
-        borderRadius: 12,
+        borderRadius: 14,
         overflow: "hidden",
         borderWidth: 1.5,
-        borderColor: theme.colors.border,
-        backgroundColor: widget.palette.surface ?? theme.colors.card,
-        shadowColor: accent,
+        borderColor: "#4A4D5A",
+        backgroundColor: "#1F2229",
+        shadowColor: "#000",
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        elevation: 3,
+        shadowOpacity: 0.5,
+        shadowRadius: 12,
+        elevation: 4,
       }}
     >
       <View style={{ height: 4, backgroundColor: accent }} />
@@ -192,42 +181,42 @@ function HeroWidget({ offer, widget, onPress }: Props) {
               justifyContent: "center",
             }}
           >
-            <Text style={{ fontSize: 26 }}>{widget.slots.emoji ?? offer.imageEmoji}</Text>
+            <Text allowFontScaling={false} style={{ fontSize: 26 }}>{widget.slots.emoji ?? offer.imageEmoji}</Text>
           </View>
           {widget.slots.showCountdown !== false ? (
             <CountdownPill expiresAt={offer.expiresAt} tone={widget.tone} />
           ) : null}
         </View>
 
-        {widget.slots.kicker ? (
-          <Text
-            style={{
-              color: accent,
-              fontSize: 11,
-              fontWeight: "800",
-              letterSpacing: 1,
-              textTransform: "uppercase",
-              marginTop: 18,
-            }}
-          >
-            {widget.slots.kicker}
-          </Text>
-        ) : null}
         <Text
+          allowFontScaling={false}
+          style={{
+            color: accent,
+            fontSize: 11,
+            fontWeight: "800",
+            letterSpacing: 1,
+            textTransform: "uppercase",
+            marginTop: 18,
+          }}
+        >
+          {kicker}
+        </Text>
+        <Text
+          allowFontScaling={false}
           style={{
             color: theme.colors.text,
-            fontSize: 22,
+            fontSize: 20,
             fontWeight: "800",
-            lineHeight: 28,
-            marginTop: widget.slots.kicker ? 6 : 18,
+            lineHeight: 26,
+            marginTop: 6,
             letterSpacing: -0.4,
           }}
         >
           {widget.slots.headline}
         </Text>
-        {widget.slots.subhead ? (
-          <Text style={{ color: theme.colors.textMuted, fontSize: 14, marginTop: 6, lineHeight: 20 }}>
-            {widget.slots.subhead}
+        {subhead ? (
+          <Text allowFontScaling={false} style={{ color: theme.colors.textMuted, fontSize: 13, marginTop: 8, lineHeight: 18 }}>
+            {subhead}
           </Text>
         ) : null}
 
@@ -252,7 +241,7 @@ function HeroWidget({ offer, widget, onPress }: Props) {
             alignItems: "center",
           }}
         >
-          <Text style={{ color: theme.colors.bg, fontSize: 14, fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.5 }}>
+          <Text allowFontScaling={false} style={{ color: theme.colors.bg, fontSize: 14, fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.5 }}>
             {widget.slots.ctaText}
           </Text>
         </View>
@@ -263,77 +252,102 @@ function HeroWidget({ offer, widget, onPress }: Props) {
 
 function CompactWidget({ offer, widget, onPress }: Props) {
   const accent = widget.palette.accent;
+  const showPrice = widget.slots.showPrice !== false;
+  const showCountdown = widget.slots.showCountdown !== false;
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => ({
         opacity: pressed ? 0.85 : 1,
-        flexDirection: "row",
-        gap: 12,
         padding: 14,
-        backgroundColor: widget.palette.surface ?? theme.colors.card,
+        gap: 12,
+        backgroundColor: "#1F2229",
         borderWidth: 1.5,
-        borderColor: theme.colors.border,
-        borderRadius: 8,
-        alignItems: "center",
+        borderColor: "#4A4D5A",
+        borderRadius: 14,
         borderLeftWidth: 4,
         borderLeftColor: accent,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.5,
+        shadowRadius: 10,
+        elevation: 4,
       })}
     >
-      <View
-        style={{
-          width: 44,
-          height: 44,
-          borderRadius: 6,
-          backgroundColor: accent + "15",
-          borderWidth: 1,
-          borderColor: accent + "40",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Text style={{ fontSize: 22 }}>{widget.slots.emoji ?? offer.imageEmoji}</Text>
-      </View>
-      <View style={{ flex: 1, gap: 2 }}>
-        <Text
-          numberOfLines={1}
-          style={{ color: theme.colors.text, fontSize: 14, fontWeight: "800", letterSpacing: -0.2 }}
+      <View style={{ flexDirection: "row", gap: 12, alignItems: "flex-start" }}>
+        <View
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 8,
+            backgroundColor: accent + "15",
+            borderWidth: 1,
+            borderColor: accent + "40",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
         >
-          {widget.slots.headline}
-        </Text>
-        {widget.slots.subhead ? (
+          <Text allowFontScaling={false} style={{ fontSize: 22 }}>{widget.slots.emoji ?? offer.imageEmoji}</Text>
+        </View>
+        <View style={{ flex: 1, gap: 3, paddingTop: 1 }}>
           <Text
-            numberOfLines={1}
-            style={{ color: theme.colors.textMuted, fontSize: 12 }}
+            numberOfLines={2}
+            allowFontScaling={false}
+            style={{ color: theme.colors.text, fontSize: 14, fontWeight: "800", letterSpacing: -0.2, lineHeight: 18 }}
           >
-            {widget.slots.subhead}
+            {widget.slots.headline}
           </Text>
-        ) : null}
-        {widget.slots.showPrice !== false ? (
-          <View style={{ flexDirection: "row", gap: 6, alignItems: "baseline", marginTop: 2 }}>
-            <Text style={{ color: accent, fontSize: 16, fontWeight: "900" }}>
-              €{(offer.finalCents / 100).toFixed(2)}
-            </Text>
+          {widget.slots.subhead ? (
             <Text
-              style={{
-                color: theme.colors.textDim,
-                fontSize: 12,
-                textDecorationLine: "line-through",
-                fontWeight: "600",
-              }}
+              numberOfLines={2}
+              allowFontScaling={false}
+              style={{ color: theme.colors.textMuted, fontSize: 11, lineHeight: 15 }}
             >
-              €{(offer.originalCents / 100).toFixed(2)}
+              {widget.slots.subhead}
             </Text>
-            <View style={{ backgroundColor: accent, borderRadius: 2, paddingHorizontal: 4, paddingVertical: 1 }}>
-              <Text style={{ color: theme.colors.bg, fontSize: 9, fontWeight: "900" }}>
-                −{offer.discountPct}%
-              </Text>
-            </View>
-          </View>
+          ) : null}
+        </View>
+        {!showPrice && showCountdown ? (
+          <CountdownPill expiresAt={offer.expiresAt} tone={widget.tone} size="sm" />
         ) : null}
       </View>
-      {widget.slots.showCountdown !== false ? (
-        <CountdownPill expiresAt={offer.expiresAt} tone={widget.tone} size="sm" />
+      {showPrice ? (
+        <>
+          <View style={{ height: 1, backgroundColor: "#3A3D4A", opacity: 0.5 }} />
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 8,
+            }}
+          >
+            <View style={{ flexDirection: "row", gap: 6, alignItems: "baseline", flexShrink: 1 }}>
+              <Text allowFontScaling={false} style={{ color: accent, fontSize: 17, fontWeight: "900", letterSpacing: -0.4 }}>
+                €{(offer.finalCents / 100).toFixed(2)}
+              </Text>
+              <Text
+                allowFontScaling={false}
+                style={{
+                  color: theme.colors.textDim,
+                  fontSize: 11,
+                  textDecorationLine: "line-through",
+                  fontWeight: "600",
+                }}
+              >
+                €{(offer.originalCents / 100).toFixed(2)}
+              </Text>
+              <View style={{ backgroundColor: accent, borderRadius: 3, paddingHorizontal: 5, paddingVertical: 2 }}>
+                <Text allowFontScaling={false} style={{ color: theme.colors.bg, fontSize: 9, fontWeight: "900" }}>
+                  −{offer.discountPct}%
+                </Text>
+              </View>
+            </View>
+            {showCountdown ? (
+              <CountdownPill expiresAt={offer.expiresAt} tone={widget.tone} size="sm" />
+            ) : null}
+          </View>
+        </>
       ) : null}
     </Pressable>
   );

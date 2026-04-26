@@ -3,12 +3,16 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
 import { theme } from "@/lib/theme";
 import { mockOffers } from "@/lib/mockOffers";
+import { offerStore } from "@/lib/offerStore";
 import { Button } from "@/components/Button";
 import { LinearGradient } from "expo-linear-gradient";
 
 export default function OfferDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const offer = mockOffers.find((o) => o.id === id) ?? mockOffers[0];
+  const offer =
+    (id ? offerStore.findById(id) : undefined) ??
+    mockOffers.find((o) => o.id === id) ??
+    mockOffers[0];
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.bg }} edges={["bottom"]}>

@@ -106,23 +106,3 @@ export function useNotifications() {
 
   return state;
 }
-
-export async function fireDemoOfferNotification(offer: {
-  id: string;
-  merchantName: string;
-  productName: string;
-  emotionalHeadline: string;
-  discountPct: number;
-}) {
-  if (Platform.OS === "web") return;
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title: offer.emotionalHeadline,
-      body: `${offer.discountPct}% off ${offer.productName} at ${offer.merchantName}`,
-      data: { offerId: offer.id },
-      categoryIdentifier: "offer",
-      sound: "default",
-    },
-    trigger: { seconds: 2, channelId: "offers" } as Notifications.TimeIntervalTriggerInput,
-  });
-}

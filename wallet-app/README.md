@@ -144,17 +144,6 @@ EAS te entrega un link → instalás vía TestFlight (iOS) o APK directo (Androi
 
 ## Probar notificaciones
 
-### Locales (no necesita backend de push)
-
-En la pantalla **Today** hay un botón **"🔔 Demo: send push in 2s"**.
-
-1. Tocalo.
-2. Mandá la app a background (botón Home).
-3. Llega una notificación con título emocional, cuerpo factual y botones de acción.
-4. Tocala → deep-linkea a `/offer/[id]`.
-
-Funciona en **simulador iOS** y en **Expo Go** real.
-
 ### Push remoto (device físico)
 
 1. Asegurate de estar en un **dispositivo real** (los simuladores no reciben push remoto).

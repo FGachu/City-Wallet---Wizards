@@ -1,15 +1,12 @@
-import { ScrollView, View, Text, RefreshControl, ActivityIndicator, Platform } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useState, useCallback } from "react";
 import { OfferCard } from "@/components/OfferCard";
-import { Button } from "@/components/Button";
-import { theme } from "@/lib/theme";
-import { fireDemoOfferNotification } from "@/hooks/useNotifications";
-import { useLocation } from "@/hooks/useLocation";
 import { useGeneratedOffers } from "@/hooks/useGeneratedOffers";
-import { demoStore, useDemoState } from "@/lib/demoStore";
+import { useLocation } from "@/hooks/useLocation";
+import { useDemoState } from "@/lib/demoStore";
+import { theme } from "@/lib/theme";
 import { router } from "expo-router";
-import { Pressable } from "react-native";
+import { useCallback, useState } from "react";
+import { ActivityIndicator, Platform, RefreshControl, ScrollView, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
@@ -37,7 +34,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.bg }} edges={["top"]}>
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: 120, gap: 20 }}
+        contentContainerStyle={{ padding: 20, paddingBottom: 40, gap: 20 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -89,7 +86,7 @@ export default function HomeScreen() {
         )}
 
         {others.length > 0 && (
-          <View style={{ gap: 16 }}>
+          <View style={{ gap: 14, marginTop: 12 }}>
             <Text
               style={{
                 color: theme.colors.text,
@@ -97,8 +94,7 @@ export default function HomeScreen() {
                 fontWeight: "900",
                 letterSpacing: 1,
                 textTransform: "uppercase",
-                marginTop: 8,
-                marginBottom: 4,
+                marginBottom: 2,
               }}
             >
               Also nearby
@@ -106,28 +102,6 @@ export default function HomeScreen() {
             {others.map((o) => (
               <OfferCard key={o.id} offer={o} onPress={() => router.push(`/offer/${o.id}`)} />
             ))}
-          </View>
-        )}
-
-        {Platform.OS !== "web" && (
-          <View style={{ gap: 8, marginTop: 8 }}>
-            {primary && (
-              <Button
-                label="🔔 Demo: send push in 2s"
-                variant="secondary"
-                onPress={() => fireDemoOfferNotification(primary)}
-              />
-            )}
-            <Text
-              style={{
-                color: theme.colors.textDim,
-                fontSize: 11,
-                textAlign: "center",
-                paddingHorizontal: 20,
-              }}
-            >
-              Background the app, then watch the push arrive.
-            </Text>
           </View>
         )}
       </ScrollView>

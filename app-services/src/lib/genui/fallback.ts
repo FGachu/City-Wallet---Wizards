@@ -68,7 +68,13 @@ function pickKicker(intent: IntentLike, variant: Variant): string | undefined {
     return "While it rains";
   if (intent.weather.tempBucket === "cold" || intent.weather.tempBucket === "freezing")
     return "Cold outside";
-  return undefined;
+  if (intent.weather.tempBucket === "hot") return "Beat the heat";
+  if (intent.intentCategory === "quick-bite") return "12 min to spare?";
+  if (intent.intentCategory === "warm-comfort") return "Warm up nearby";
+  if (intent.intentCategory === "cozy-treat") return "Treat moment";
+  if (intent.intentCategory === "post-work-unwind") return "Unwind nearby";
+  if (intent.intentCategory === "weekend-explore") return "Weekend find";
+  return "Tuned to right now";
 }
 
 function clampChips(chips: string[], userStyle: UserStyle, variant: Variant): string[] | undefined {

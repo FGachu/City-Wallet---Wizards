@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, type Coords } from "@/lib/api";
 import { mockOffers, type Offer } from "@/lib/mockOffers";
+import { offerStore } from "@/lib/offerStore";
 import { distillIntent } from "@/lib/privacy/intentDistiller";
 import { privacyStore, useLastIntent } from "@/lib/privacy/store";
 import type { BudgetTier } from "@/lib/privacy/types";
@@ -76,6 +77,7 @@ export function useGeneratedOffers(
       }
 
       setOffers(merged);
+      offerStore.setOffers(merged);
       setSource(res.source);
       setMode(res.source === "gemini" ? "live" : "server-fallback");
       setContext({
@@ -87,6 +89,7 @@ export function useGeneratedOffers(
       const msg = err instanceof Error ? err.message : String(err);
       console.warn("[offers] request failed, using local mockOffers:", msg);
       setOffers(mockOffers);
+      offerStore.setOffers(mockOffers);
       setError(msg);
       setSource(null);
       setMode("offline");

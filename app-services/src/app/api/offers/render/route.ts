@@ -224,8 +224,8 @@ Design rules:
 - palette.accent: hex (#RRGGBB), pull from offer.accentColor or shift hue to match tone.
 - palette.bg, palette.surface: optional dark hex backgrounds harmonising with accent.
 - slots.headline (≤80 chars): rewrite if needed to match tone — emotional/playful tones allowed to be evocative.
-- slots.subhead (≤120 chars, optional): omit for sticker; omit for low textDensity unless variant is hero.
-- slots.kicker (≤30 chars, optional): tiny label above headline, for hero/banner.
+- slots.subhead (≤120 chars): REQUIRED for hero (a short factual descriptive sentence about the offer). Omit for sticker. Omit for low textDensity unless variant is hero.
+- slots.kicker (≤30 chars): REQUIRED for hero and banner — a short emotional hook that grabs attention BEFORE the headline (e.g. "Cold outside", "12 min to spare?", "Quiet right now"). Optional otherwise.
 - slots.ctaText (≤20 chars): action verb suiting variant ("Tap", "Use it", "See offer").
 - slots.chips (0–3 short tags): semantic context labels. Sticker=0, banner≤1, low-density≤1.
 - slots.emoji: keep offer's emoji or a more fitting single-glyph one.
