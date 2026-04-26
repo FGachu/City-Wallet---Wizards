@@ -1,3 +1,5 @@
+import type { LiveOpenWeatherSnapshot } from "@/lib/live-weather";
+
 /**
  * Grounding signals the console agents consume.
  * Shape matches what real integrations would return (OpenWeatherMap-style, Eventbrite-style,
@@ -105,6 +107,28 @@ export function isDataGrounding(value: unknown): value is DataGrounding {
     typeof v.genUi === "object" &&
     v.genUi !== null
   );
+}
+
+export function mergeLiveOpenWeather(g: DataGrounding, live: LiveOpenWeatherSnapshot): DataGrounding {
+  const precip = live.rain1h ?? 0;
+  return {
+    ...g,
+    weather: {
+      ...g.weather,
+      provider: "openweathermap",
+      city: live.city,
+      lat: live.lat,
+      lon: live.lon,
+      observedAt: live.observedAt,
+      tempC: live.tempC,
+      feelsLikeC: live.feelsLikeC,
+      precipMm1h: precip,
+      windMs: live.windMs,
+      conditionCode: live.icon || g.weather.conditionCode,
+      conditionLabel: live.description,
+      sourceNote: "Live OpenWeatherMap current weather API."
+    }
+  };
 }
 
 export function stuttgartDemoGrounding(merchantName = "Cafe Hafen"): DataGrounding {

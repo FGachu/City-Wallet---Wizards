@@ -24,10 +24,10 @@ export function LogsPanel({ logs }: { logs: LogItem[] }) {
   const renderedLogs = useMemo(() => logs.slice(0, 100), [logs]);
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/30 shadow-glass backdrop-blur-md">
+    <div className="rounded-lg border border-border bg-card shadow-sm">
       <div className="flex items-center justify-between p-4">
         <div className="flex items-center gap-2 text-sm">
-          <TerminalSquare className="h-4 w-4 text-primary" />
+          <TerminalSquare className="h-4 w-4 text-muted-foreground" />
           Logs Console
         </div>
         <Button size="sm" variant="ghost" onClick={() => setOpen((value) => !value)}>
@@ -43,8 +43,8 @@ export function LogsPanel({ logs }: { logs: LogItem[] }) {
                 <p className="text-muted-foreground">No logs yet. Run an agent to see request/response traces.</p>
               ) : (
                 renderedLogs.map((log) => (
-                  <div key={log.id} className="rounded-lg border border-white/10 bg-secondary/20 p-3">
-                    <p className="mb-1 text-[11px] text-primary">
+                  <div key={log.id} className="rounded-md border border-border bg-muted/40 p-3">
+                    <p className="mb-1 text-[11px] font-medium text-foreground">
                       [{new Date(log.timestamp).toLocaleTimeString()}] {AGENT_LABELS[log.agent]} - {log.status}
                     </p>
                     <p className="mb-2 text-[11px] text-muted-foreground">

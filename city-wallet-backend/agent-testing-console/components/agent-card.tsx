@@ -1,7 +1,5 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
 import { LoaderCircle, Play, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,27 +35,17 @@ const badgeMap: Record<AgentStatus, "secondary" | "warning" | "success" | "error
 };
 
 export function AgentCard({ agent, onSelect, onPromptChange, onInputChange, onRun, onClear }: AgentCardProps) {
-  const [typedOutput, setTypedOutput] = useState("");
-
-  const output = useMemo(() => agent.streamedOutput || "", [agent.streamedOutput]);
-
-  useEffect(() => {
-    if (!output) {
-      setTypedOutput("");
-      return;
-    }
-    let index = 0;
-    const timer = window.setInterval(() => {
-      index += 2;
-      setTypedOutput(output.slice(0, index));
-      if (index >= output.length) window.clearInterval(timer);
-    }, 16);
-    return () => window.clearInterval(timer);
-  }, [output]);
+  const liveOutput = agent.streamedOutput || "";
 
   return (
-    <motion.div layout whileHover={{ y: -2 }} onClick={onSelect}>
-      <Card className={agent.selected ? "border-primary/40" : ""}>
+    <div
+      className="cursor-pointer rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      onClick={onSelect}
+      onKeyDown={(e) => e.key === "Enter" && onSelect()}
+      role="button"
+      tabIndex={0}
+    >
+      <Card className={agent.selected ? "border-primary ring-1 ring-primary/25" : ""}>
         <CardHeader className="space-y-3">
           <div className="flex items-center justify-between">
             <CardTitle>{agent.name}</CardTitle>
@@ -86,9 +74,9 @@ export function AgentCard({ agent, onSelect, onPromptChange, onInputChange, onRu
               Clear
             </Button>
           </div>
-          <div className="rounded-xl border border-white/10 bg-secondary/20 p-3">
-            <p className="mb-2 text-xs text-muted-foreground">Streaming output</p>
-            <p className="min-h-8 text-sm">{typedOutput || "No output yet."}</p>
+          <div className="rounded-md border border-border bg-muted/50 p-3">
+            <p className="mb-2 text-xs text-muted-foreground">Live stream (SSE)</p>
+            <p className="min-h-8 whitespace-pre-wrap break-words text-sm">{liveOutput || "No output yet."}</p>
           </div>
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>Latency: {formatMs(agent.latency)}</span>
@@ -96,6 +84,6 @@ export function AgentCard({ agent, onSelect, onPromptChange, onInputChange, onRu
           </div>
         </CardContent>
       </Card>
-    </motion.div>
+    </div>
   );
 }

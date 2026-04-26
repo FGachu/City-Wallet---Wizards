@@ -7,6 +7,7 @@ import {
   type AgentStatus,
   type SharedMemory
 } from "@/lib/mock-agents";
+import type { LiveWeatherApiResponse } from "@/lib/live-weather";
 import { AGENT_LABELS, DEFAULT_PROMPTS } from "@/lib/pipeline";
 
 type LogItem = {
@@ -45,6 +46,8 @@ type ConsoleState = {
   isPipelineRunning: boolean;
   activeScenarioId: string;
   agents: Record<AgentKey, AgentState>;
+  /** Latest `/api/live-weather` response for the current shared-memory city. */
+  liveWeather: LiveWeatherApiResponse | null;
   setEnvironment: (environment: ConsoleState["environment"]) => void;
   setSharedMemoryText: (value: string) => void;
   setScenarioInputText: (value: string) => void;
@@ -58,12 +61,15 @@ type ConsoleState = {
     key: AgentKey,
     payload: { output: string; latency: number; tokens: number; streamedOutput: string }
   ) => void;
+  /** Append live tokens while `stream: true` SSE is in flight. */
+  setAgentStreamOutput: (key: AgentKey, streamedOutput: string) => void;
   clearAgent: (key: AgentKey) => void;
   addLog: (log: Omit<LogItem, "id">) => void;
   setPipelineRunning: (value: boolean) => void;
   resetSession: () => void;
   saveScenario: () => void;
   loadScenario: (id: string) => void;
+  fetchLiveWeather: () => Promise<void>;
 };
 
 const baseScenario = preloadedScenarios[0];
@@ -105,6 +111,7 @@ export const useConsoleStore = create<ConsoleState>((set, get) => ({
   isPipelineRunning: false,
   activeScenarioId: baseScenario.id,
   agents: getInitialAgents(),
+  liveWeather: null,
   setEnvironment: (environment) => set({ environment }),
   setSharedMemoryText: (value) => {
     try {
@@ -150,6 +157,17 @@ export const useConsoleStore = create<ConsoleState>((set, get) => ({
         }
       }
     })),
+  setAgentStreamOutput: (key, streamedOutput) =>
+    set((state) => ({
+      agents: {
+        ...state.agents,
+        [key]: {
+          ...state.agents[key],
+          streamedOutput,
+          status: "running"
+        }
+      }
+    })),
   clearAgent: (key) =>
     set((state) => ({
       agents: {
@@ -174,6 +192,7 @@ export const useConsoleStore = create<ConsoleState>((set, get) => ({
     set({
       agents: getInitialAgents(),
       logs: [],
+      liveWeather: null,
       sharedMemoryText: JSON.stringify(initialSharedMemory, null, 2),
       sharedMemory: initialSharedMemory
     }),
@@ -196,5 +215,17 @@ export const useConsoleStore = create<ConsoleState>((set, get) => ({
       sharedMemory: scenario.memory,
       scenarioInputText: JSON.stringify(scenario.inputs, null, 2)
     });
+  },
+  fetchLiveWeather: async () => {
+    const city = get().sharedMemory.location?.trim() || "Stuttgart";
+    try {
+      const res = await fetch(`/api/live-weather?q=${encodeURIComponent(city)}`);
+      const data = (await res.json()) as LiveWeatherApiResponse;
+      set({ liveWeather: data });
+    } catch {
+      set({
+        liveWeather: { ok: false, reason: "network", message: "Could not reach weather API." }
+      });
+    }
   }
 }));

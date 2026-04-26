@@ -3,21 +3,21 @@
 @tailwind utilities;
 
 :root {
-  --background: 224 35% 8%;
-  --foreground: 220 18% 95%;
-  --card: 225 30% 12%;
-  --card-foreground: 220 18% 94%;
-  --primary: 201 100% 56%;
-  --primary-foreground: 222 47% 11%;
-  --secondary: 227 24% 18%;
-  --secondary-foreground: 220 16% 90%;
-  --muted: 225 18% 20%;
-  --muted-foreground: 218 12% 70%;
-  --accent: 264 82% 63%;
-  --accent-foreground: 220 18% 97%;
-  --border: 225 20% 24%;
-  --input: 225 24% 20%;
-  --ring: 201 100% 56%;
+  --background: 0 0% 98%;
+  --foreground: 222.2 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 47% 11%;
+  --primary: 221.2 83% 53%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 222.2 47% 11%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 16% 47%;
+  --accent: 210 40% 96%;
+  --accent-foreground: 222.2 47% 11%;
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 221.2 83% 53%;
 }
 
 * {
@@ -26,8 +26,4 @@
 
 body {
   @apply min-h-screen bg-background text-foreground antialiased;
-  background-image:
-    radial-gradient(circle at 10% 0%, rgba(56, 189, 248, 0.14), transparent 35%),
-    radial-gradient(circle at 90% 10%, rgba(168, 85, 247, 0.16), transparent 30%),
-    linear-gradient(180deg, rgba(17, 24, 39, 0.95), rgba(9, 11, 20, 1));
 }

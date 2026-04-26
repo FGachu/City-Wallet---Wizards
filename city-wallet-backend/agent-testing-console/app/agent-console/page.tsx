@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo } from "react";
-import { AnimatePresence } from "framer-motion";
 import { AgentCard } from "@/components/agent-card";
 import { Header } from "@/components/header";
 import { LogsPanel } from "@/components/logs-panel";
 import { Sidebar } from "@/components/sidebar";
 import { isDataGrounding } from "@/lib/data-grounding";
 import type { AgentKey } from "@/lib/mock-agents";
+import { formatLocalTimeHHMM } from "@/lib/runtime-context";
+import { consumeRunAgentSse } from "@/lib/run-agent-sse";
 import { PIPELINE_ORDER } from "@/lib/pipeline";
 import { useConsoleStore } from "@/store/useConsoleStore";
 
@@ -30,6 +31,7 @@ export default function AgentConsolePage() {
     setAgentInputJson,
     setAgentStatus,
     setAgentResult,
+    setAgentStreamOutput,
     clearAgent,
     selectAgent,
     sharedMemory,
@@ -43,6 +45,7 @@ export default function AgentConsolePage() {
     setSessionStateText,
     addLog,
     logs,
+    liveWeather,
     isPipelineRunning,
     setPipelineRunning,
     resetSession,
@@ -58,13 +61,25 @@ export default function AgentConsolePage() {
       const { grounding: scenarioGrounding, ...scenarioRest } = scenarioObj;
       const input = { ...scenarioRest, ...agentObj };
       const grounding = isDataGrounding(scenarioGrounding) ? scenarioGrounding : undefined;
+      const memoryForRun = {
+        ...sharedMemory,
+        time: formatLocalTimeHHMM(new Date()),
+        weather:
+          liveWeather?.ok === true
+            ? `${liveWeather.description}, ${liveWeather.tempC.toFixed(0)}°C`
+            : sharedMemory.weather
+      };
       const requestPayload = {
         agent: agentKey,
         prompt: agent.prompt,
         input,
-        sharedMemory,
-        ...(grounding ? { grounding } : {})
+        sharedMemory: memoryForRun,
+        stream: true as const,
+        ...(grounding ? { grounding } : {}),
+        ...(liveWeather?.ok === true ? { liveOpenWeather: liveWeather } : {})
       };
+
+      setAgentStreamOutput(agentKey, "");
 
       try {
         const response = await fetch("/api/run-agent", {
@@ -72,26 +87,68 @@ export default function AgentConsolePage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(requestPayload)
         });
-        const data = (await response.json()) as {
-          success: boolean;
-          output: string;
-          latency: number;
-          tokens: number;
-        };
-        setAgentResult(agentKey, {
-          output: data.output,
-          streamedOutput: data.output,
-          latency: data.latency,
-          tokens: data.tokens
-        });
-        addLog({
-          timestamp: new Date().toISOString(),
-          agent: agentKey,
-          status: data.success ? "success" : "error",
-          latency: data.latency,
-          tokens: data.tokens,
-          requestPayload,
-          responsePayload: data
+
+        const contentType = response.headers.get("content-type") ?? "";
+
+        if (!response.ok || !contentType.includes("text/event-stream")) {
+          const errJson = (await response.json().catch(() => null)) as {
+            error?: string;
+            message?: string;
+          } | null;
+          setAgentStatus(agentKey, "error");
+          addLog({
+            timestamp: new Date().toISOString(),
+            agent: agentKey,
+            status: "error",
+            latency: 0,
+            tokens: 0,
+            requestPayload,
+            responsePayload: errJson ?? { status: response.status }
+          });
+          return;
+        }
+
+        let accumulated = "";
+        await consumeRunAgentSse(response, {
+          onDelta: (text) => {
+            accumulated += text;
+            setAgentStreamOutput(agentKey, accumulated);
+          },
+          onComplete: (ev) => {
+            setAgentResult(agentKey, {
+              output: ev.output,
+              streamedOutput: ev.output,
+              latency: ev.latency,
+              tokens: ev.tokens
+            });
+            addLog({
+              timestamp: new Date().toISOString(),
+              agent: agentKey,
+              status: ev.success ? "success" : "error",
+              latency: ev.latency,
+              tokens: ev.tokens,
+              requestPayload,
+              responsePayload: {
+                success: ev.success,
+                output: ev.output,
+                latency: ev.latency,
+                tokens: ev.tokens,
+                payload: ev.payload
+              }
+            });
+          },
+          onError: (message) => {
+            setAgentStatus(agentKey, "error");
+            addLog({
+              timestamp: new Date().toISOString(),
+              agent: agentKey,
+              status: "error",
+              latency: 0,
+              tokens: 0,
+              requestPayload,
+              responsePayload: { message }
+            });
+          }
         });
       } catch (error) {
         setAgentStatus(agentKey, "error");
@@ -106,7 +163,16 @@ export default function AgentConsolePage() {
         });
       }
     },
-    [addLog, agents, scenarioInputText, setAgentResult, setAgentStatus, sharedMemory]
+    [
+      addLog,
+      agents,
+      liveWeather,
+      scenarioInputText,
+      setAgentResult,
+      setAgentStatus,
+      setAgentStreamOutput,
+      sharedMemory
+    ]
   );
 
   const runPipeline = useCallback(async () => {
@@ -150,24 +216,22 @@ export default function AgentConsolePage() {
       />
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-10">
         <section className="space-y-4 xl:col-span-7">
-          <AnimatePresence>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {(Object.keys(agents) as AgentKey[]).map((agentKey) => {
-                const agent = agents[agentKey];
-                return (
-                  <AgentCard
-                    key={agent.key}
-                    agent={agent}
-                    onSelect={() => selectAgent(agent.key)}
-                    onPromptChange={(value) => setAgentPrompt(agent.key, value)}
-                    onInputChange={(value) => setAgentInputJson(agent.key, value)}
-                    onRun={() => void runAgent(agent.key)}
-                    onClear={() => clearAgent(agent.key)}
-                  />
-                );
-              })}
-            </div>
-          </AnimatePresence>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {(Object.keys(agents) as AgentKey[]).map((agentKey) => {
+              const agent = agents[agentKey];
+              return (
+                <AgentCard
+                  key={agent.key}
+                  agent={agent}
+                  onSelect={() => selectAgent(agent.key)}
+                  onPromptChange={(value) => setAgentPrompt(agent.key, value)}
+                  onInputChange={(value) => setAgentInputJson(agent.key, value)}
+                  onRun={() => void runAgent(agent.key)}
+                  onClear={() => clearAgent(agent.key)}
+                />
+              );
+            })}
+          </div>
         </section>
         <aside className="xl:col-span-3">
           <Sidebar

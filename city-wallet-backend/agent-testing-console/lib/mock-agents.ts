@@ -1,8 +1,10 @@
 import {
   type DataGrounding,
   isDataGrounding,
+  mergeLiveOpenWeather,
   stuttgartDemoGrounding
 } from "@/lib/data-grounding";
+import type { LiveOpenWeatherSnapshot } from "@/lib/live-weather";
 
 export type AgentKey =
   | "context-agent"
@@ -31,7 +33,24 @@ export type RunAgentRequest = {
   sharedMemory: SharedMemory;
   /** When omitted, a location-consistent demo bundle is derived from shared memory. */
   grounding?: DataGrounding;
+  /** Live OpenWeatherMap snapshot from `/api/live-weather`; merged into resolved grounding. */
+  liveOpenWeather?: LiveOpenWeatherSnapshot;
+  /** Client hint; stripped before execution. When true, use SSE from `/api/run-agent`. */
+  stream?: boolean;
 };
+
+export type RunAgentStreamEvent =
+  | { type: "status"; message: string }
+  | { type: "delta"; text: string }
+  | {
+      type: "complete";
+      success: boolean;
+      output: string;
+      latency: number;
+      tokens: number;
+      payload: Record<string, unknown>;
+    }
+  | { type: "error"; message: string };
 
 export type RunAgentResponse = {
   success: boolean;
@@ -66,18 +85,25 @@ function delay(ms: number) {
 
 function resolveGrounding(request: RunAgentRequest): DataGrounding {
   if (request.grounding && isDataGrounding(request.grounding)) {
-    return request.grounding;
+    return applyLiveOpenWeatherLayer(request.grounding, request);
   }
   const fromInput = request.input.grounding;
   if (isDataGrounding(fromInput)) {
-    return fromInput;
+    return applyLiveOpenWeatherLayer(fromInput, request);
   }
   const merchants = request.input.nearbyMerchants;
   const first =
     Array.isArray(merchants) && merchants.length > 0 && typeof merchants[0] === "string"
       ? merchants[0]
       : "Cafe Hafen";
-  return stuttgartDemoGrounding(first);
+  return applyLiveOpenWeatherLayer(stuttgartDemoGrounding(first), request);
+}
+
+function applyLiveOpenWeatherLayer(g: DataGrounding, request: RunAgentRequest): DataGrounding {
+  if (request.liveOpenWeather) {
+    return mergeLiveOpenWeather(g, request.liveOpenWeather);
+  }
+  return g;
 }
 
 function inferContext(memory: SharedMemory, g: DataGrounding) {
@@ -148,25 +174,13 @@ function analyticsPrediction(memory: SharedMemory, g: DataGrounding) {
   return `Predicted acceptance: ${Math.round(p * 100)}% (grounded on weather precip, POI footfall, Payone quiet, on-device intent confidence).`;
 }
 
-export const preloadedScenarios = [
-  {
-    id: "mia-rainy-lunch",
-    name: "Mia Lunch in Rain",
-    memory: seedScenarioMemory,
-    inputs: {
-      age: 28,
-      nearbyMerchants: ["Cafe Hafen", "Brot Ecke", "Suppe & Co"],
-      grounding: stuttgartDemoGrounding("Cafe Hafen")
-    }
-  }
-];
+function baseLatencyMs(agent: AgentKey): number {
+  return 520 + agent.length * 25;
+}
 
-export async function runMockAgent(request: RunAgentRequest): Promise<RunAgentResponse> {
+function computeRun(request: RunAgentRequest): Omit<RunAgentResponse, "success" | "latency"> & { latencyMs: number } {
   const { agent, sharedMemory } = request;
   const g = resolveGrounding(request);
-  const baseDelay = 520 + agent.length * 25;
-  await delay(baseDelay);
-
   let output = "";
   switch (agent) {
     case "context-agent":
@@ -191,24 +205,87 @@ export async function runMockAgent(request: RunAgentRequest): Promise<RunAgentRe
       output = "Agent run completed.";
   }
 
+  const latencyMs = baseLatencyMs(agent);
+  const tokens = seededTokenWeights[agent] + sharedMemory.location.length * 3;
+  const payload: Record<string, unknown> = {
+    prompt: request.prompt ?? "",
+    input: request.input,
+    memory: sharedMemory,
+    grounding: g,
+    groundingProvenance: {
+      weather: g.weather.sourceNote,
+      events: g.localEvent.sourceNote,
+      poi: g.poi.sourceNote,
+      payone: g.payone.sourceNote,
+      onDevice: g.onDeviceIntent.sourceNote,
+      genUi: g.genUi.sourceNote
+    }
+  };
+
+  return { output, tokens, payload, latencyMs };
+}
+
+export const preloadedScenarios = [
+  {
+    id: "mia-rainy-lunch",
+    name: "Mia Lunch in Rain",
+    memory: seedScenarioMemory,
+    inputs: {
+      age: 28,
+      nearbyMerchants: ["Cafe Hafen", "Brot Ecke", "Suppe & Co"],
+      grounding: stuttgartDemoGrounding("Cafe Hafen")
+    }
+  }
+];
+
+export async function runMockAgent(request: RunAgentRequest): Promise<RunAgentResponse> {
+  const { latencyMs, output, tokens, payload } = computeRun(request);
+  await delay(latencyMs);
   return {
     success: true,
     output,
-    latency: baseDelay,
-    tokens: seededTokenWeights[agent] + sharedMemory.location.length * 3,
-    payload: {
-      prompt: request.prompt ?? "",
-      input: request.input,
-      memory: sharedMemory,
-      grounding: g,
-      groundingProvenance: {
-        weather: g.weather.sourceNote,
-        events: g.localEvent.sourceNote,
-        poi: g.poi.sourceNote,
-        payone: g.payone.sourceNote,
-        onDevice: g.onDeviceIntent.sourceNote,
-        genUi: g.genUi.sourceNote
-      }
-    }
+    latency: latencyMs,
+    tokens,
+    payload
+  };
+}
+
+/** Strip fields the executor must not see. */
+export function toExecutorRequest(body: RunAgentRequest): RunAgentRequest {
+  const { stream, ...rest } = body;
+  void stream;
+  return rest;
+}
+
+const STREAM_CHUNK = 28;
+const STREAM_CHUNK_GAP_MS = 14;
+
+export async function* runMockAgentStream(request: RunAgentRequest): AsyncGenerator<RunAgentStreamEvent> {
+  const started = Date.now();
+  const { agent } = request;
+  const wait = baseLatencyMs(agent);
+  yield { type: "status", message: `${agent.replace(/-/g, " ")} — starting` };
+
+  const ticks = 5;
+  for (let i = 0; i < ticks; i++) {
+    await delay(wait / ticks);
+    yield { type: "status", message: `Grounding & policy… ${Math.round(((i + 1) / ticks) * 100)}%` };
+  }
+
+  const { latencyMs, output, tokens, payload } = computeRun(request);
+
+  for (let i = 0; i < output.length; i += STREAM_CHUNK) {
+    yield { type: "delta", text: output.slice(i, i + STREAM_CHUNK) };
+    await delay(STREAM_CHUNK_GAP_MS);
+  }
+
+  const latency = Date.now() - started;
+  yield {
+    type: "complete",
+    success: true,
+    output,
+    latency,
+    tokens,
+    payload: { ...payload, simulatedModelLatencyMs: latencyMs }
   };
 }

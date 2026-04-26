@@ -53,7 +53,7 @@ export function DataSourcesPanel() {
         from your APIs and keep secrets in <code className="rounded bg-muted px-1 py-0.5 text-[11px]">.env.local</code>.
       </p>
       {SOURCE_GROUPS.map((group) => (
-        <Card key={group.title} className="border-dashed">
+        <Card key={group.title} className="border-border">
           <CardHeader className="py-3">
             <CardTitle className="text-sm font-medium text-foreground">{group.title}</CardTitle>
           </CardHeader>

@@ -38,7 +38,7 @@ export function Sidebar(props: SidebarProps) {
               title="Editable shared state"
               value={props.sharedMemoryText}
               onChange={props.setSharedMemoryText}
-              helper="Changes affect all next agent runs."
+              helper="Changes affect all next agent runs. The location field is used for live OpenWeatherMap lookups in the header."
             />
           </TabsContent>
           <TabsContent value="scenario">
