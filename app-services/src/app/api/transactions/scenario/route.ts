@@ -20,7 +20,7 @@ export async function GET() {
   return NextResponse.json(
     {
       activeOverrides: getActiveOverrides(),
-      hint: "Merchant IDs are Google Place IDs. Discover them via /api/transactions/density?lat=&lon=&radiusKm=",
+      hint: "Merchant IDs come from the registered catalog. Discover them via /api/transactions/density?lat=&lon=&radiusKm= or /api/merchants/nearby.",
     },
     { headers: CORS_HEADERS },
   );

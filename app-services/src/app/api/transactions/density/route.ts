@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CatalogError, fetchMerchantCatalog } from "@/lib/payone/catalog";
+import { findMerchantsNearby } from "@/lib/merchants/catalog";
 import { getActiveOverrides, queryDensity } from "@/lib/payone/simulator";
 
 const CORS_HEADERS = {
@@ -18,7 +18,6 @@ export async function GET(request: NextRequest) {
   const lon = searchParams.get("lon");
   const radiusKm = Number(searchParams.get("radiusKm") ?? "0.5");
   const windowMinutes = Number(searchParams.get("windowMinutes") ?? "15");
-  const maxMerchants = Number(searchParams.get("maxMerchants") ?? "20");
   const atParam = searchParams.get("at");
 
   if (!lat || !lon) {
@@ -26,7 +25,7 @@ export async function GET(request: NextRequest) {
       {
         error: "Missing required query parameters",
         details: "Provide both 'lat' and 'lon' as query parameters.",
-        example: "/api/transactions/density?lat=48.7784&lon=9.18&radiusKm=0.5&windowMinutes=15",
+        example: "/api/transactions/density?lat=48.7780&lon=9.1810&radiusKm=0.5&windowMinutes=15",
       },
       { status: 400, headers: CORS_HEADERS },
     );
@@ -70,26 +69,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  let merchants;
-  try {
-    merchants = await fetchMerchantCatalog({
-      lat: latNum,
-      lon: lonNum,
-      radiusKm,
-      maxResults: Number.isFinite(maxMerchants) ? maxMerchants : 20,
-    });
-  } catch (err) {
-    if (err instanceof CatalogError) {
-      return NextResponse.json(
-        { error: err.message, details: err.details ?? null },
-        { status: err.status, headers: CORS_HEADERS },
-      );
-    }
-    return NextResponse.json(
-      { error: "Failed to load merchant catalog", details: err instanceof Error ? err.message : String(err) },
-      { status: 502, headers: CORS_HEADERS },
-    );
-  }
+  const merchants = findMerchantsNearby(latNum, lonNum, radiusKm).map((n) => n.merchant);
 
   const densities = queryDensity(merchants, {
     lat: latNum,
@@ -110,7 +90,7 @@ export async function GET(request: NextRequest) {
         at: at.toISOString(),
       },
       catalog: {
-        source: "google.places",
+        source: "registered.catalog",
         merchantsFetched: merchants.length,
       },
       summary: {

@@ -2,7 +2,7 @@ export type MerchantCategory = "cafe" | "restaurant" | "bakery" | "bar" | "retai
 
 export type Merchant = {
   id: string;
-  googlePlaceId: string;
+  googlePlaceId: string | null;
   name: string;
   category: MerchantCategory;
   mcc: string;
