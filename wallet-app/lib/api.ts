@@ -1,4 +1,6 @@
 import Constants from "expo-constants";
+import type { IntentPayload } from "./privacy/types";
+import type { Offer } from "./mockOffers";
 
 const baseUrl: string =
   process.env.EXPO_PUBLIC_API_BASE_URL ??
@@ -9,7 +11,45 @@ if (__DEV__) {
   console.log(`[api] baseUrl = ${baseUrl}`);
 }
 
+function logOutbound(method: string, path: string, init?: RequestInit) {
+  if (!__DEV__) return;
+  const isPublicLookup = method === "GET" && /[?&]lat=/.test(path);
+  if (isPublicLookup) {
+    console.log(`[privacy:public-lookup] ${method} ${path}`);
+    return;
+  }
+  if (init?.body && typeof init.body === "string") {
+    try {
+      const parsed = JSON.parse(init.body);
+      const summary = describeKeys(parsed);
+      console.log(`[privacy] -> ${method} ${path} keys=${JSON.stringify(summary)}`);
+    } catch {
+      console.log(`[privacy] -> ${method} ${path} (non-JSON body)`);
+    }
+  } else {
+    console.log(`[api] ${method} ${path}`);
+  }
+}
+
+function describeKeys(node: unknown, prefix = ""): string[] {
+  if (node === null || typeof node !== "object") return [];
+  if (Array.isArray(node)) return [`${prefix || "(root)"}[]`];
+  const out: string[] = [];
+  for (const k of Object.keys(node as Record<string, unknown>)) {
+    const path = prefix ? `${prefix}.${k}` : k;
+    const v = (node as Record<string, unknown>)[k];
+    if (v && typeof v === "object" && !Array.isArray(v)) {
+      out.push(...describeKeys(v, path));
+    } else {
+      out.push(path);
+    }
+  }
+  return out;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const method = init?.method ?? "GET";
+  logOutbound(method, path, init);
   const res = await fetch(`${baseUrl}${path}`, {
     ...init,
     headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
@@ -106,6 +146,12 @@ export type EventsResponse = {
   events: EventItem[];
 };
 
+export type GenerateOfferResponse = {
+  offers: Offer[];
+  source: "gemini" | "fallback.no-gemini-key" | "fallback.gemini-error";
+  details?: string;
+};
+
 export const api = {
   baseUrl,
   density: (c: Coords, radiusKm = 1, windowMinutes = 30) =>
@@ -121,6 +167,11 @@ export const api = {
     request<EventsResponse>(
       `/api/events?lat=${c.lat}&lon=${c.lon}&within=${radiusKm}km&size=${size}`,
     ),
+  generateOffer: (intent: IntentPayload, merchantIds: string[] = []) =>
+    request<GenerateOfferResponse>(`/api/offers/generate`, {
+      method: "POST",
+      body: JSON.stringify({ intent, merchantIds }),
+    }),
   setScenario: (merchantId: string, multiplier: number) =>
     request<{ activeOverrides: Record<string, number> }>(`/api/transactions/scenario`, {
       method: "POST",

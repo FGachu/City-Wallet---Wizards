@@ -28,6 +28,7 @@ export default function RootLayout() {
           options={{ presentation: "modal", title: "Offer" }}
         />
         <Stack.Screen name="redeem/[id]" options={{ title: "Redeem", presentation: "modal" }} />
+        <Stack.Screen name="privacy" options={{ title: "Privacy", presentation: "modal" }} />
       </Stack>
       <StatusBar style="light" />
     </GestureHandlerRootView>

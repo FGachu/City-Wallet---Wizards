@@ -1,11 +1,21 @@
-import { ScrollView, View, Text } from "react-native";
+import { ScrollView, View, Text, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from "expo-router";
 import { theme } from "@/lib/theme";
 import { useNotifications } from "@/hooks/useNotifications";
 import { api } from "@/lib/api";
+import { useLastIntent } from "@/lib/privacy/store";
 
 export default function ProfileScreen() {
   const notif = useNotifications();
+  const { lastIntent, lastSentAt } = useLastIntent();
+
+  const districtRow = lastIntent?.district ?? "—";
+  const intentRow = lastIntent
+    ? `${lastIntent.intentCategory} · ${lastIntent.timeBucket}`
+    : "no intent sent yet";
+  const lastSentRow = lastSentAt ? new Date(lastSentAt).toLocaleTimeString() : "—";
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.bg }} edges={["top"]}>
       <ScrollView contentContainerStyle={{ padding: 20, gap: 14 }}>
@@ -16,11 +26,13 @@ export default function ProfileScreen() {
           <Row k="City" v="Stuttgart" />
         </Section>
 
-        <Section title="Privacy">
-          <Row k="On-device personalisation" v="Phi-3 mini · enabled" />
-          <Row k="Upstream signals" v="abstract intent only" />
-          <Row k="GDPR consent" v="granted · 2026-04-12" />
-        </Section>
+        <Pressable onPress={() => router.push("/privacy")}>
+          <Section title="Privacy ›">
+            <Row k="District sent" v={districtRow} />
+            <Row k="Intent" v={intentRow} />
+            <Row k="Last sent" v={lastSentRow} />
+          </Section>
+        </Pressable>
 
         <Section title="Push notifications">
           <Row k="Permission" v={notif.permission} />
