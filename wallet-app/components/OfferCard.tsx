@@ -4,13 +4,33 @@ import { LinearGradient } from "expo-linear-gradient";
 import { theme } from "@/lib/theme";
 import type { Offer } from "@/lib/mockOffers";
 
+function nextSimulatedWindowMs() {
+  // 8–22 min so demos always show an active, plausible window.
+  return (8 + Math.floor(Math.random() * 15)) * 60_000;
+}
+
 function useCountdown(expiresAt: string) {
   const [now, setNow] = useState(() => Date.now());
+  const [target, setTarget] = useState(() => {
+    const t = new Date(expiresAt).getTime();
+    return Number.isFinite(t) && t > Date.now() ? t : Date.now() + nextSimulatedWindowMs();
+  });
+
+  useEffect(() => {
+    const t = new Date(expiresAt).getTime();
+    if (Number.isFinite(t) && t > Date.now()) setTarget(t);
+  }, [expiresAt]);
+
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
-  const ms = Math.max(0, new Date(expiresAt).getTime() - now);
+
+  useEffect(() => {
+    if (target - now <= 0) setTarget(Date.now() + nextSimulatedWindowMs());
+  }, [target, now]);
+
+  const ms = Math.max(0, target - now);
   const min = Math.floor(ms / 60_000);
   const sec = Math.floor((ms % 60_000) / 1000);
   return { min, sec, ms, label: `${min}:${sec.toString().padStart(2, "0")}` };

@@ -1,4 +1,11 @@
-// fallback only — primary path is /api/offers/generate via useGeneratedOffers
+/* 
+
+!! THIS IS ONLY A FALLBACK !!
+If we don't have any generated offers, we'll use these mock offers.
+
+*/
+
+
 export type Offer = {
   id: string;
   merchantId: string;
