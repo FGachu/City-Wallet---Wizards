@@ -1,0 +1,21 @@
+# Dependencies and build
+node_modules/
+.next/
+out/
+dist/
+*.tsbuildinfo
+
+# Env (keep .env.example tracked)
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+.venv/
+venv/
+*.pyc
+
+# OS / IDE
+.DS_Store
+Thumbs.db

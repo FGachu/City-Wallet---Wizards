@@ -1,4 +1,13 @@
-# City Wallet Backend (FastAPI)
+# City Wallet Backend
+
+This folder contains:
+
+1. **FastAPI service** (files in this directory: `main.py`, `requirements.txt`) — wallet context and offer APIs.
+2. **`agent-testing-console/`** — Next.js agent testing console (copy `agent-testing-console/.env.example` to `.env.local` there, then `npm install && npm run dev`).
+
+---
+
+## FastAPI backend
 
 Minimal async backend for a city wallet app with:
 - `GET /context`
