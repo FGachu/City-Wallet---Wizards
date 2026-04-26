@@ -1,6 +1,5 @@
-import Link from "next/link";
+import WeatherWidget from "@/components/weather-widget";
 import {
-  ArrowUpRight,
   Check,
   CloudDrizzle,
   Eye,
@@ -9,7 +8,9 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import LiveHeader from "@/components/live-header";
 import StatCard from "@/components/stat-card";
+import RevenueCard from "@/components/revenue-card";
 import TrafficLight from "@/components/traffic-light";
 import {
   mockContextSignals,
@@ -43,29 +44,23 @@ const signalIcon = {
   "Payone density": Zap,
 } as const;
 
+import GenerativeNotification from "@/components/generative-notification";
+
 export default function OverviewPage() {
   return (
     <div className="max-w-7xl mx-auto space-y-8">
-      <div className="flex items-end justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Today</h1>
-          <p className="text-sm text-ink-500 mt-1">
-            Tuesday, 21 April · Live demand and offer performance.
-          </p>
-        </div>
-        <Link
-          href="/monitoring"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:text-brand-700"
-        >
-          Open monitoring
-          <ArrowUpRight className="size-4" />
-        </Link>
-      </div>
+      <LiveHeader />
+
+      <GenerativeNotification />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {mockKPIs.map((kpi) => (
-          <StatCard key={kpi.label} {...kpi} />
-        ))}
+        {mockKPIs.map((kpi) => 
+          kpi.label === "Revenue lift" ? (
+            <RevenueCard key={kpi.label} {...kpi} />
+          ) : (
+            <StatCard key={kpi.label} {...kpi} />
+          )
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -124,8 +119,11 @@ export default function OverviewPage() {
             <div className="text-xs uppercase tracking-wider text-ink-500 mb-3">
               Live context signals
             </div>
+            <WeatherWidget />
             <div className="space-y-3">
-              {mockContextSignals.map((s) => {
+              {mockContextSignals
+                .filter(s => s.label !== "Weather")
+                .map((s) => {
                 const Icon =
                   signalIcon[s.label as keyof typeof signalIcon] ?? Zap;
                 return (

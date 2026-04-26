@@ -1,33 +1,6 @@
 import { Clock, Info, Sparkles } from "lucide-react";
 import TrafficLight from "@/components/traffic-light";
-
-const HOURS = [
-  { h: "09", state: "steady" },
-  { h: "10", state: "steady" },
-  { h: "11", state: "bring" },
-  { h: "12", state: "bring" },
-  { h: "13", state: "bring" },
-  { h: "14", state: "steady" },
-  { h: "15", state: "steady" },
-  { h: "16", state: "steady" },
-  { h: "17", state: "bring" },
-  { h: "18", state: "full" },
-  { h: "19", state: "full" },
-  { h: "20", state: "full" },
-  { h: "21", state: "steady" },
-];
-
-const stateColor: Record<string, string> = {
-  bring: "bg-emerald-500",
-  steady: "bg-amber-500",
-  full: "bg-rose-500",
-};
-
-const stateLabel: Record<string, string> = {
-  bring: "Bring them in",
-  steady: "Steady",
-  full: "Full",
-};
+import DayOutlook from "@/components/day-outlook";
 
 export default function MonitoringPage() {
   return (
@@ -62,26 +35,9 @@ export default function MonitoringPage() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3 text-[11px] text-ink-500">
-            <Legend color="bg-emerald-500" label="Bring them in" />
-            <Legend color="bg-amber-500" label="Steady" />
-            <Legend color="bg-rose-500" label="Full" />
-          </div>
         </div>
 
-        <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${HOURS.length}, 1fr)` }}>
-          {HOURS.map((h) => (
-            <div key={h.h} className="flex flex-col items-center gap-1.5">
-              <div
-                className={
-                  "h-16 w-full rounded-md " + stateColor[h.state]
-                }
-                title={stateLabel[h.state]}
-              />
-              <div className="text-[10px] text-ink-500">{h.h}</div>
-            </div>
-          ))}
-        </div>
+        <DayOutlook />
       </div>
 
       <div className="rounded-2xl border border-ink-200 bg-white p-6">
