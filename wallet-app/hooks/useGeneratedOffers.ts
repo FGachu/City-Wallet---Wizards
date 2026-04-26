@@ -18,6 +18,11 @@ export type UseGeneratedOffersResult = {
   source: string | null;
   error: string | null;
   regenerate: () => Promise<void>;
+  context: {
+    city: string | null;
+    temp: number | null;
+    condition: string | null;
+  } | null;
 };
 
 export function useGeneratedOffers(
@@ -28,6 +33,7 @@ export function useGeneratedOffers(
   const [mode, setMode] = useState<OffersMode>("loading");
   const [source, setSource] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [context, setContext] = useState<UseGeneratedOffersResult["context"]>(null);
   const { consentGivenAt } = useLastIntent();
 
   const run = useCallback(async () => {
@@ -59,6 +65,11 @@ export function useGeneratedOffers(
       setOffers(res.offers);
       setSource(res.source);
       setMode(res.source === "gemini" ? "live" : "server-fallback");
+      setContext({
+        city: w?.location?.name ?? null,
+        temp: w?.temperature?.current ?? null,
+        condition: w?.conditions?.description ?? null,
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.warn("[offers] request failed, using local mockOffers:", msg);
@@ -73,5 +84,5 @@ export function useGeneratedOffers(
     run();
   }, [run]);
 
-  return { offers, mode, source, error, regenerate: run };
+  return { offers, mode, source, error, context, regenerate: run };
 }

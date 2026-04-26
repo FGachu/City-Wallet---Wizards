@@ -24,8 +24,18 @@ const GRID_RESOLUTION = 0.005;
 const MAX_RESULTS = 8;
 const MIN_REVIEWS = 10;
 
-const merchantCache = new Map<string, RegisteredMerchant>();
-const nearbyCache = new Map<string, { ts: number; placeIds: string[] }>();
+const globalForDiscovery = global as unknown as {
+  merchantCache?: Map<string, RegisteredMerchant>;
+  nearbyCache?: Map<string, { ts: number; placeIds: string[] }>;
+};
+
+const merchantCache = globalForDiscovery.merchantCache ?? new Map<string, RegisteredMerchant>();
+const nearbyCache = globalForDiscovery.nearbyCache ?? new Map<string, { ts: number; placeIds: string[] }>();
+
+if (process.env.NODE_ENV !== "production") {
+  globalForDiscovery.merchantCache = merchantCache;
+  globalForDiscovery.nearbyCache = nearbyCache;
+}
 
 function gridKey(lat: number, lon: number, radiusKm: number, types: string[]): string {
   const lt = Math.round(lat / GRID_RESOLUTION) * GRID_RESOLUTION;

@@ -9,12 +9,15 @@ import { fireDemoOfferNotification } from "@/hooks/useNotifications";
 import { useLocation } from "@/hooks/useLocation";
 import { useGeneratedOffers } from "@/hooks/useGeneratedOffers";
 import { useLastIntent } from "@/lib/privacy/store";
+import { demoStore, useDemoState } from "@/lib/demoStore";
 import { router } from "expo-router";
+import { Pressable } from "react-native";
 
 export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const loc = useLocation();
-  const { offers, mode, source, regenerate } = useGeneratedOffers(loc.coords);
+  const { locationMode } = useDemoState();
+  const { offers, mode, source, context, regenerate } = useGeneratedOffers(loc.coords);
   const { lastIntent } = useLastIntent();
 
   const onRefresh = useCallback(async () => {
@@ -43,13 +46,15 @@ export default function HomeScreen() {
         }
       >
         <View style={{ gap: 4 }}>
-          <Text style={{ color: theme.colors.textMuted, fontSize: 13, fontWeight: "500" }}>
-            {loc.coords ? `${loc.coords.lat.toFixed(3)}, ${loc.coords.lon.toFixed(3)}` : "locating…"}
-          </Text>
           <Text style={{ color: theme.colors.text, fontSize: 28, fontWeight: "700", lineHeight: 34 }}>
             Hey Mia 👋
           </Text>
-          <Text style={{ color: theme.colors.textMuted, fontSize: 15, marginTop: 2 }}>
+          {context && (
+            <Text style={{ color: theme.colors.textMuted, fontSize: 16, fontWeight: "500" }}>
+              {context.temp ? `${Math.round(context.temp)}°C` : ""} {context.condition} {context.city ? `in ${context.city}` : ""}
+            </Text>
+          )}
+          <Text style={{ color: theme.colors.textMuted, fontSize: 15, marginTop: 4 }}>
             One offer is tuned to your last 12 minutes.
           </Text>
         </View>
@@ -57,52 +62,9 @@ export default function HomeScreen() {
         <ContextStrip
           signals={[
             { icon: "🌧", label: tempLabel },
-            { icon: "📍", label: districtLabel },
             { icon: "✨", label: intentLabel },
           ]}
         />
-
-        {mode === "offline" && (
-          <View
-            style={{
-              backgroundColor: "#3a2a1a",
-              borderColor: "#a26a3a",
-              borderWidth: 1,
-              borderRadius: 10,
-              padding: 10,
-            }}
-          >
-            <Text style={{ color: "#f0c486", fontSize: 12, fontWeight: "600" }}>
-              Offline samples · API unreachable
-            </Text>
-            <Text style={{ color: "#c9a06a", fontSize: 11, marginTop: 2 }}>
-              Showing bundled mock offers. Pull to retry.
-            </Text>
-          </View>
-        )}
-
-        {mode === "server-fallback" && (
-          <View
-            style={{
-              backgroundColor: "#1c2a3a",
-              borderColor: "#3a6aa2",
-              borderWidth: 1,
-              borderRadius: 10,
-              padding: 10,
-            }}
-          >
-            <Text style={{ color: "#86b6f0", fontSize: 12, fontWeight: "600" }}>
-              Demo mode · server-side fallback
-            </Text>
-            <Text style={{ color: "#6a90c9", fontSize: 11, marginTop: 2 }}>
-              {source === "fallback.no-gemini-key"
-                ? "Server reachable. Set GEMINI_API_KEY to enable live generation."
-                : source === "fallback.gemini-error"
-                  ? "Gemini errored or quota hit — using template offers."
-                  : "Server reachable. Showing template offers."}
-            </Text>
-          </View>
-        )}
 
         {mode === "loading" && !primary && (
           <View style={{ alignItems: "center", padding: 24 }}>
