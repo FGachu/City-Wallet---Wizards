@@ -2,13 +2,11 @@ import { ScrollView, View, Text, RefreshControl, ActivityIndicator } from "react
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useState, useCallback } from "react";
 import { OfferCard } from "@/components/OfferCard";
-import { ContextStrip } from "@/components/ContextStrip";
 import { Button } from "@/components/Button";
 import { theme } from "@/lib/theme";
 import { fireDemoOfferNotification } from "@/hooks/useNotifications";
 import { useLocation } from "@/hooks/useLocation";
 import { useGeneratedOffers } from "@/hooks/useGeneratedOffers";
-import { useLastIntent } from "@/lib/privacy/store";
 import { demoStore, useDemoState } from "@/lib/demoStore";
 import { router } from "expo-router";
 import { Pressable } from "react-native";
@@ -18,7 +16,6 @@ export default function HomeScreen() {
   const loc = useLocation();
   const { locationMode } = useDemoState();
   const { offers, mode, source, context, regenerate } = useGeneratedOffers(loc.coords);
-  const { lastIntent } = useLastIntent();
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -28,10 +25,6 @@ export default function HomeScreen() {
 
   const primary = offers[0];
   const others = offers.slice(1);
-
-  const tempLabel = lastIntent ? `${lastIntent.weather.tempBucket} ${lastIntent.weather.condition}` : "—";
-  const districtLabel = lastIntent?.district ?? "Café district";
-  const intentLabel = lastIntent ? lastIntent.intentCategory.replace("-", " ") : "12 min free";
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.bg }} edges={["top"]}>
@@ -47,7 +40,7 @@ export default function HomeScreen() {
       >
         <View style={{ gap: 4 }}>
           <Text style={{ color: theme.colors.text, fontSize: 28, fontWeight: "700", lineHeight: 34 }}>
-            Hey Mia 👋
+            Hey Lena 👋
           </Text>
           {context && (
             <Text style={{ color: theme.colors.textMuted, fontSize: 16, fontWeight: "500" }}>
@@ -58,13 +51,6 @@ export default function HomeScreen() {
             One offer is tuned to your last 12 minutes.
           </Text>
         </View>
-
-        <ContextStrip
-          signals={[
-            { icon: "🌧", label: tempLabel },
-            { icon: "✨", label: intentLabel },
-          ]}
-        />
 
         {mode === "loading" && !primary && (
           <View style={{ alignItems: "center", padding: 24 }}>
