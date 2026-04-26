@@ -14,7 +14,7 @@ import { router } from "expo-router";
 export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const loc = useLocation();
-  const { offers, mode, regenerate } = useGeneratedOffers(loc.coords);
+  const { offers, mode, source, regenerate } = useGeneratedOffers(loc.coords);
   const { lastIntent } = useLastIntent();
 
   const onRefresh = useCallback(async () => {
@@ -95,24 +95,11 @@ export default function HomeScreen() {
               Demo mode · server-side fallback
             </Text>
             <Text style={{ color: "#6a90c9", fontSize: 11, marginTop: 2 }}>
-              Server reachable. Set GEMINI_API_KEY to enable live generation.
-            </Text>
-          </View>
-        )}
-
-        {mode === "live" && (
-          <View
-            style={{
-              backgroundColor: "#1c3a2a",
-              borderColor: "#3aa26a",
-              borderWidth: 1,
-              borderRadius: 10,
-              padding: 8,
-              alignSelf: "flex-start",
-            }}
-          >
-            <Text style={{ color: "#86f0b6", fontSize: 11, fontWeight: "600" }}>
-              ● live · Gemini-generated
+              {source === "fallback.no-gemini-key"
+                ? "Server reachable. Set GEMINI_API_KEY to enable live generation."
+                : source === "fallback.gemini-error"
+                  ? "Gemini errored or quota hit — using template offers."
+                  : "Server reachable. Showing template offers."}
             </Text>
           </View>
         )}

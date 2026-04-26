@@ -441,13 +441,23 @@ function deriveBaselineDailyTx(userRatingCount: number | null): number {
   return clamp(Math.round(reviews / 5), 40, 400);
 }
 
+const GENERIC_SUBTYPES = new Set([
+  "vegetarian_restaurant",
+  "vegan_restaurant",
+  "asian_restaurant",
+  "fast_food_restaurant",
+]);
+
 function pickSubtype(place: PlaceItem): CuisineSubtype | null {
-  if (place.primaryType && SUBTYPE_OVERRIDES[place.primaryType]) {
-    return SUBTYPE_OVERRIDES[place.primaryType];
-  }
-  for (const t of place.types ?? []) {
-    if (SUBTYPE_OVERRIDES[t]) return SUBTYPE_OVERRIDES[t];
-  }
+  const candidates = [place.primaryType, ...(place.types ?? [])].filter(
+    (t): t is string => !!t,
+  );
+  const specific = candidates.find(
+    (t) => SUBTYPE_OVERRIDES[t] && !GENERIC_SUBTYPES.has(t),
+  );
+  if (specific) return SUBTYPE_OVERRIDES[specific];
+  const generic = candidates.find((t) => SUBTYPE_OVERRIDES[t]);
+  if (generic) return SUBTYPE_OVERRIDES[generic];
   return null;
 }
 
