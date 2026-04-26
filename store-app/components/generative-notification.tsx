@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Sparkles, Check } from "lucide-react";
+import { getCurrentVenueName } from "@/lib/current-venue";
 
 export default function GenerativeNotification() {
   const [notification, setNotification] = useState<{
@@ -11,10 +12,27 @@ export default function GenerativeNotification() {
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [accepted, setAccepted] = useState(false);
+  const [cafeName, setCafeName] = useState<string>("your nearby cafe");
 
   useEffect(() => {
     async function fetchNotification() {
+      let resolvedCafeName = "your nearby cafe";
       try {
+        const currentVenueName = getCurrentVenueName();
+        if (currentVenueName) {
+          resolvedCafeName = currentVenueName;
+          setCafeName(currentVenueName);
+        }
+
+        const settingsRes = await fetch("/api/settings", { cache: "no-store" });
+        if (settingsRes.ok) {
+          const settings = (await settingsRes.json()) as { venueName?: string };
+          if (!currentVenueName && settings.venueName?.trim()) {
+            resolvedCafeName = settings.venueName.trim();
+            setCafeName(resolvedCafeName);
+          }
+        }
+
         // Fetch from the local context engine which talks to Gemini
         // We use port 3001 for app-services as defined in its package.json dev script
         // Note: For CORS to work properly during local development without setup, 
@@ -49,7 +67,7 @@ export default function GenerativeNotification() {
         console.error("Using fallback notification due to error or missing API key:", err);
         // Fallback for hackathon demo if no API key is set
         setNotification({
-          message: "It's cold and overcast outside, and foot traffic is low. Suggesting a 15% 'Rainy Day' discount on Hot Chocolate to boost volume.",
+          message: `It's cold and overcast outside near ${resolvedCafeName}, and foot traffic is low. Suggesting a 15% 'Rainy Day' discount on Hot Chocolate to boost volume.`,
           suggestedProduct: "Hot Chocolate",
           suggestedDiscount: 15,
         });
@@ -82,7 +100,7 @@ export default function GenerativeNotification() {
           <span className="text-xs font-semibold uppercase tracking-wider">Offer Activated</span>
         </div>
         <p className="text-sm text-emerald-900">
-          Your dynamically generated offer for {notification?.suggestedDiscount}% off {notification?.suggestedProduct} is now live and being distributed to matching users nearby.
+          Your dynamically generated offer for {notification?.suggestedDiscount}% off {notification?.suggestedProduct} at {cafeName} is now live and being distributed to matching users nearby.
         </p>
       </div>
     );
@@ -112,6 +130,8 @@ export default function GenerativeNotification() {
             Accept & Deploy
           </button>
           <div className="text-xs text-brand-700/70 flex items-center gap-2 bg-white/50 px-3 py-2 rounded-lg border border-brand-200/50">
+            <span className="font-semibold text-brand-900">{cafeName}</span>
+            <span>·</span>
             <span className="font-semibold text-brand-900">{notification?.suggestedProduct}</span>
             <span>·</span>
             <span className="font-semibold text-emerald-600">{notification?.suggestedDiscount}% off</span>

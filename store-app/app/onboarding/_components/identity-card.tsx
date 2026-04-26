@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Building2, MapPin, Navigation } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { setCurrentVenueSnapshot } from "@/lib/current-venue";
 
 const inputCls =
   "w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500";
@@ -60,11 +61,26 @@ export function IdentityCard({
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [isLocating, setIsLocating] = useState(false);
+  const [isLiveTracking, setIsLiveTracking] = useState(false);
+  const [locationInfo, setLocationInfo] = useState<{
+    latitude: number;
+    longitude: number;
+    updatedAt: number;
+  } | null>(null);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
   const debounceRef = useRef<number | null>(null);
   const skipFetchRef = useRef(false);
+  const watchIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    };
+  }, []);
+
 
   useEffect(() => {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -178,42 +194,72 @@ export function IdentityCard({
     }
   };
 
+  const syncAddressFromCoordinates = async (
+    latitude: number,
+    longitude: number,
+  ) => {
+    try {
+      const response = await fetch(
+        `/api/location/reverse?lat=${latitude}&lng=${longitude}`,
+        { cache: "no-store" },
+      );
+      const data = (await response.json()) as {
+        address?: string | null;
+        nearestRestaurantName?: string | null;
+      };
+      skipFetchRef.current = true;
+      const resolvedAddress =
+        data.address || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+      setAddress(resolvedAddress);
+      const resolvedName = data.nearestRestaurantName?.trim() || name.trim();
+      if (data.nearestRestaurantName) {
+        setName(data.nearestRestaurantName);
+      }
+      setCurrentVenueSnapshot(resolvedName, resolvedAddress);
+    } catch {
+      skipFetchRef.current = true;
+      const fallbackAddress = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+      setAddress(fallbackAddress);
+      setCurrentVenueSnapshot(name, fallbackAddress);
+    }
+  };
+
   const handleLiveLocation = () => {
     if (!("geolocation" in navigator)) return;
+
+    if (isLiveTracking && watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+      setIsLiveTracking(false);
+      return;
+    }
+
     setIsLocating(true);
-    navigator.geolocation.getCurrentPosition(
+    const watchId = navigator.geolocation.watchPosition(
       async (position) => {
-        try {
-          const { latitude, longitude } = position.coords;
-          const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-          if (apiKey) {
-            const res = await fetch(
-              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`,
-            );
-            const data = await res.json();
-            skipFetchRef.current = true;
-            if (data.results?.length > 0) {
-              setAddress(data.results[0].formatted_address);
-            } else {
-              setAddress(`${latitude}, ${longitude}`);
-            }
-          } else {
-            skipFetchRef.current = true;
-            setAddress("Königstraße 12, 70173 Stuttgart (Simulated Live)");
-          }
-        } catch (e) {
-          console.error(e);
-        } finally {
-          setIsLocating(false);
-        }
+        const { latitude, longitude } = position.coords;
+        setLocationInfo({
+          latitude,
+          longitude,
+          updatedAt: Date.now(),
+        });
+        setIsLiveTracking(true);
+        await syncAddressFromCoordinates(latitude, longitude);
+        setIsLocating(false);
       },
       (error) => {
-        console.error("Error getting location", error);
+        console.error("Error getting live location", error);
         setIsLocating(false);
-        skipFetchRef.current = true;
-        setAddress("Königstraße 12, 70173 Stuttgart (Simulated Live)");
+        setIsLiveTracking(false);
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 2000,
+        timeout: 10000,
       },
     );
+
+    watchIdRef.current = watchId;
   };
 
   return (
@@ -253,8 +299,14 @@ export function IdentityCard({
               type="button"
               className="text-brand-600 hover:text-brand-700 flex items-center gap-1 transition-colors font-medium"
             >
-              <Navigation className={cn("size-3", isLocating && "animate-pulse")} />
-              {isLocating ? "Locating..." : "Use Live Location"}
+              <Navigation
+                className={cn("size-3", (isLocating || isLiveTracking) && "animate-pulse")}
+              />
+              {isLocating
+                ? "Locating..."
+                : isLiveTracking
+                  ? "Stop Live Location"
+                  : "Use Live Location"}
             </button>
           </div>
           <div className="relative">
@@ -271,6 +323,13 @@ export function IdentityCard({
               aria-expanded={isOpen}
               aria-autocomplete="list"
             />
+            {locationInfo && (
+              <p className="mt-2 text-[11px] text-ink-500">
+                Live: {locationInfo.latitude.toFixed(6)},{" "}
+                {locationInfo.longitude.toFixed(6)} · Updated{" "}
+                {new Date(locationInfo.updatedAt).toLocaleTimeString()}
+              </p>
+            )}
             {isOpen && suggestions.length > 0 && (
               <ul
                 role="listbox"

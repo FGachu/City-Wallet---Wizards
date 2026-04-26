@@ -1,6 +1,13 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
 import { Bookmark, MapPin, Sparkles, Star } from "lucide-react";
 import { euro } from "@/lib/utils";
 import type { Offer, Variant } from "../../types";
+import {
+  getCurrentVenueAddress,
+  getCurrentVenueName,
+} from "@/lib/current-venue";
 
 export function DiscoveryCard({
   variant,
@@ -11,13 +18,36 @@ export function DiscoveryCard({
 }) {
   const finalPrice = offer.price * (1 - offer.discount / 100);
   const saving = offer.price - finalPrice;
+  const [liveVenueName, setLiveVenueName] = useState<string | null>(null);
+  const [liveAddress, setLiveAddress] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLiveVenueName(getCurrentVenueName());
+    setLiveAddress(getCurrentVenueAddress());
+  }, []);
+
+  const locationLabel = useMemo(() => {
+    if (!liveAddress) return "Near you";
+    const parts = liveAddress
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean);
+    if (parts.length >= 3) return `${parts[1]} · ${parts[2]}`;
+    if (parts.length >= 2) return `${parts[0]} · ${parts[1]}`;
+    return parts[0] || "Near you";
+  }, [liveAddress]);
+
+  const headline = liveVenueName
+    ? `A ${liveVenueName} classic.`
+    : variant.headline;
+
   return (
     <div className="rounded-2xl bg-[#fdfaf3] shadow-lg overflow-hidden border border-emerald-200/70 relative">
       <div className="aspect-[16/7] bg-gradient-to-br from-emerald-200 via-teal-200 to-sky-200 relative overflow-hidden">
         <div className="absolute inset-0 opacity-60 mix-blend-multiply bg-[radial-gradient(circle_at_30%_40%,rgba(255,255,255,0.6),transparent_60%)]" />
         <div className="absolute top-2 left-2 inline-flex items-center gap-1 bg-white/90 backdrop-blur rounded-full px-2 py-0.5 text-[9px] font-semibold text-emerald-800 shadow-sm">
           <MapPin className="size-2.5" />
-          Stuttgart · Mitte
+          {locationLabel}
         </div>
         <div className="absolute bottom-2 right-2 size-9 grid place-items-center rounded-md border-2 border-emerald-700/70 bg-white/80 rotate-[-6deg] shadow">
           <div className="text-[7px] font-bold text-emerald-800 leading-tight text-center">
@@ -42,7 +72,7 @@ export function DiscoveryCard({
           className="text-[17px] leading-tight text-ink-900 font-semibold"
           style={{ fontFamily: "Georgia, serif" }}
         >
-          {variant.headline}
+          {headline}
         </div>
         <div className="text-[11px] text-ink-600 leading-snug">
           {variant.sub(offer.item)}

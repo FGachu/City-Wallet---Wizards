@@ -1,10 +1,64 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { Bell, Search } from "lucide-react";
 import { useOnboarding } from "@/lib/onboarding-context";
+import {
+  CURRENT_VENUE_UPDATED_EVENT,
+  getCurrentVenueAddress,
+  getCurrentVenueName,
+} from "@/lib/current-venue";
 
 export default function Topbar() {
   const { completed, hydrated } = useOnboarding();
+  const [venueName, setVenueName] = useState("Café Müller");
+  const [venueAddress, setVenueAddress] = useState("Stuttgart Innenstadt");
+
+  useEffect(() => {
+    const updateFromCurrentVenue = () => {
+      const liveName = getCurrentVenueName();
+      const liveAddress = getCurrentVenueAddress();
+      if (liveName) setVenueName(liveName);
+      if (liveAddress) setVenueAddress(formatAddressForTopbar(liveAddress));
+    };
+
+    const loadFallbackSettings = async () => {
+      const response = await fetch("/api/settings", { cache: "no-store" });
+      if (!response.ok) return;
+      const settings = (await response.json()) as {
+        venueName?: string;
+        address?: string;
+      };
+      if (settings.venueName?.trim()) setVenueName(settings.venueName.trim());
+      if (settings.address?.trim()) {
+        setVenueAddress(formatAddressForTopbar(settings.address));
+      }
+    };
+
+    updateFromCurrentVenue();
+    loadFallbackSettings().catch(() => undefined);
+
+    window.addEventListener(CURRENT_VENUE_UPDATED_EVENT, updateFromCurrentVenue);
+    window.addEventListener("storage", updateFromCurrentVenue);
+    return () => {
+      window.removeEventListener(
+        CURRENT_VENUE_UPDATED_EVENT,
+        updateFromCurrentVenue
+      );
+      window.removeEventListener("storage", updateFromCurrentVenue);
+    };
+  }, []);
+
+  const initials = useMemo(() => {
+    const words = venueName
+      .split(/\s+/)
+      .map((word) => word.trim())
+      .filter(Boolean);
+    return words
+      .slice(0, 2)
+      .map((word) => word[0]?.toUpperCase() ?? "")
+      .join("") || "CW";
+  }, [venueName]);
 
   if (!hydrated || !completed) return null;
 
@@ -16,7 +70,7 @@ export default function Topbar() {
             Restaurant
           </div>
           <div className="text-sm font-semibold">
-            Café Müller · Stuttgart Innenstadt
+            {venueName} · {venueAddress}
           </div>
         </div>
       </div>
@@ -40,9 +94,20 @@ export default function Topbar() {
         </button>
 
         <div className="size-9 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 grid place-items-center text-white text-xs font-semibold shadow-sm">
-          KM
+          {initials}
         </div>
       </div>
     </header>
   );
+}
+
+function formatAddressForTopbar(address: string): string {
+  const parts = address
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length >= 3) return `${parts[1]} ${parts[2]}`;
+  if (parts.length >= 2) return `${parts[0]} ${parts[1]}`;
+  return parts[0] ?? "Your current area";
 }

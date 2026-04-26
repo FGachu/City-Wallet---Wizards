@@ -8,7 +8,6 @@ import {
   CustomerPreview,
 } from "./_components/customer-preview";
 import { IdentityCard } from "./_components/identity-card";
-import { LiveToggle } from "./_components/live-toggle";
 import {
   ComingSoonUpload,
   InventoryPreview,
@@ -86,18 +85,6 @@ export default function OnboardingPage() {
             generating the right offer for the right person at the right minute.
           </p>
         </div>
-        <LiveToggle
-          live={live}
-          setLive={setLive}
-          disabled={items.length === 0 || verifyStatus !== "verified"}
-          blockedReason={
-            items.length === 0
-              ? "Add menu items first"
-              : verifyStatus !== "verified"
-              ? "Verify ownership first"
-              : undefined
-          }
-        />
       </header>
 
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_400px] gap-6 lg:gap-8 items-start">

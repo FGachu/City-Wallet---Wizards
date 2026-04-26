@@ -2,30 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  Package,
-  Activity,
-  Tag,
-  Settings,
-  Sparkles,
-  Wand2,
-} from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useOnboarding } from "@/lib/onboarding-context";
-
-const items = [
-  { href: "/", label: "Overview", icon: LayoutDashboard },
-  { href: "/onboarding", label: "Onboarding", icon: Wand2 },
-  { href: "/products", label: "Products", icon: Package },
-  { href: "/monitoring", label: "Monitoring", icon: Activity },
-  { href: "/offers", label: "Live offers", icon: Tag },
-  { href: "/settings", label: "Settings", icon: Settings },
-];
+import {
+  navigationItems,
+  type NavigationPath,
+} from "@/lib/navigation-items";
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { completed } = useOnboarding();
+  const { completed, setLastVisitedPath } = useOnboarding();
+
+  const handleNavigate = (href: NavigationPath) => {
+    setLastVisitedPath(href);
+  };
 
   return (
     <aside className="w-64 shrink-0 border-r border-ink-200 bg-white px-4 py-6 flex flex-col gap-8">
@@ -46,36 +37,27 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex flex-col gap-0.5">
-        {items.map((item) => {
+        {navigationItems.map((item) => {
           const active = pathname === item.href;
-          const isOnboarding = item.href === "/onboarding";
-          const locked = !completed && !isOnboarding;
           const Icon = item.icon;
 
           const content = (
             <>
               <Icon className="size-4" />
               <span>{item.label}</span>
+              {!completed && item.href !== "/onboarding" && (
+                <span className="ml-auto rounded-full border border-ink-200 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-ink-400">
+                  Setup
+                </span>
+              )}
             </>
           );
-
-          if (locked) {
-            return (
-              <span
-                key={item.href}
-                aria-disabled="true"
-                title="Finish onboarding to unlock"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-ink-300 cursor-not-allowed select-none"
-              >
-                {content}
-              </span>
-            );
-          }
 
           return (
             <Link
               key={item.href}
               href={item.href}
+              onClick={() => handleNavigate(item.href)}
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition",
                 active
