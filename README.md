@@ -26,18 +26,17 @@
 
 ## Architecture Overview
 
-
 ```mermaid
 flowchart LR
     subgraph Mobile
-        WA[Wallet App (React Native)] -->|API Calls| B[Backend API]
+        WA[Wallet App (React Native)] --> B[Backend API]
     end
 
     subgraph Web
-        SA[Store App (Next.js)] -->|API Calls| B
+        SA[Store App (Next.js)] --> B
     end
 
-    B --> RE[Recommendation Engine (Python/TypeScript)]
+    B --> RE[Recommendation Engine Python TypeScript]
     RE --> MT[Merchant Transaction Feed]
     B --> GPS[Location Service]
     B --> DB[(PostgreSQL Database)]
@@ -50,7 +49,6 @@ flowchart LR
     style GPS fill:#0f172a,stroke:#38bdf8,color:#fff
     style DB fill:#0f172a,stroke:#94a3b8,color:#fff
 ```
-
 
 The system consists of loosely coupled services communicating over a **REST/GraphQL** API layer.   
 - **Wallet App** – consumer‑facing mobile UI (React Native) where users view offers, coupons, and transaction history.  
