@@ -23,13 +23,21 @@ export default function HomeScreen() {
     setRefreshing(false);
   }, [regenerate]);
 
-  const primary = offers[0];
-  const others = offers.slice(1);
+  const primary = offers[0]
+    ? {
+        ...offers[0],
+        widget: offers[0].widget ? { ...offers[0].widget, variant: "hero" as const } : undefined,
+      }
+    : undefined;
+  const others = offers.slice(1).map((o) => ({
+    ...o,
+    widget: o.widget ? { ...o.widget, variant: "compact" as const } : undefined,
+  }));
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.bg }} edges={["top"]}>
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: 40, gap: 20 }}
+        contentContainerStyle={{ padding: 20, paddingBottom: 120, gap: 20 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

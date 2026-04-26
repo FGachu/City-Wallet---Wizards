@@ -30,7 +30,7 @@ export function useGeneratedOffers(
   coords: Coords | null,
   opts: UseGeneratedOffersOptions = {},
 ): UseGeneratedOffersResult {
-  const [offers, setOffers] = useState<Offer[]>(mockOffers);
+  const [offers, setOffers] = useState<Offer[]>([]);
   const [mode, setMode] = useState<OffersMode>("loading");
   const [source, setSource] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
