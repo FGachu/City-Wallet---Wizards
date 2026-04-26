@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { upstreamFetchOptions } from "@/lib/upstreamCache";
 
 const OPENWEATHER_URL = "https://api.openweathermap.org/data/2.5/weather";
 
@@ -90,7 +91,7 @@ export async function GET(request: NextRequest) {
   upstream.searchParams.set("appid", apiKey);
 
   try {
-    const res = await fetch(upstream.toString(), { next: { revalidate: 60 } });
+    const res = await fetch(upstream.toString(), upstreamFetchOptions(60));
     if (!res.ok) {
       const body = await res.text();
       return NextResponse.json(
