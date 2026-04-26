@@ -4,6 +4,7 @@ import { mockOffers, type Offer } from "@/lib/mockOffers";
 import { distillIntent } from "@/lib/privacy/intentDistiller";
 import { privacyStore, useLastIntent } from "@/lib/privacy/store";
 import type { BudgetTier } from "@/lib/privacy/types";
+import { userStyleStore } from "@/lib/genui/mockSlm";
 
 export type OffersMode = "loading" | "live" | "server-fallback" | "offline";
 
@@ -56,7 +57,19 @@ export function useGeneratedOffers(
       const merchantIds = (d?.merchants ?? []).slice(0, 5).map((m) => m.id);
       const res = await api.generateOffer(intent, merchantIds);
       if (res.offers.length === 0) throw new Error("Empty offers from server");
-      setOffers(res.offers);
+
+      const userStyle = userStyleStore.get();
+      let merged = res.offers;
+      try {
+        const rendered = await api.renderOffers(intent, userStyle, res.offers);
+        const byId = new Map(rendered.widgets.map((w) => [w.offerId, w]));
+        merged = res.offers.map((o) => ({ ...o, widget: byId.get(o.id) }));
+      } catch (renderErr) {
+        const msg = renderErr instanceof Error ? renderErr.message : String(renderErr);
+        console.warn("[render] widget render failed, using legacy card:", msg);
+      }
+
+      setOffers(merged);
       setSource(res.source);
       setMode(res.source === "gemini" ? "live" : "server-fallback");
     } catch (err) {

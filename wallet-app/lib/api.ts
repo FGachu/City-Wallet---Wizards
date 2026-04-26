@@ -1,6 +1,7 @@
 import Constants from "expo-constants";
 import type { IntentPayload } from "./privacy/types";
 import type { Offer } from "./mockOffers";
+import type { GenUIWidget, UserStyle } from "./genui/types";
 
 const baseUrl: string =
   process.env.EXPO_PUBLIC_API_BASE_URL ??
@@ -159,6 +160,16 @@ export type GenerateOfferResponse = {
   details?: string;
 };
 
+export type RenderOffersResponse = {
+  widgets: GenUIWidget[];
+  source:
+    | "gemini"
+    | "gemini.partial-fallback"
+    | "fallback.no-gemini-key"
+    | "fallback.gemini-error";
+  details?: string;
+};
+
 export const api = {
   baseUrl,
   density: (c: Coords, radiusKm = 1, windowMinutes = 30) => {
@@ -187,6 +198,30 @@ export const api = {
     request<GenerateOfferResponse>(`/api/offers/generate`, {
       method: "POST",
       body: JSON.stringify({ intent, merchantIds }),
+    }),
+  renderOffers: (intent: IntentPayload, userStyle: UserStyle, offers: Offer[]) =>
+    request<RenderOffersResponse>(`/api/offers/render`, {
+      method: "POST",
+      body: JSON.stringify({
+        intent,
+        userStyle,
+        offers: offers.map((o) => ({
+          id: o.id,
+          merchantId: o.merchantId,
+          merchantName: o.merchantName,
+          productName: o.productName,
+          emotionalHeadline: o.emotionalHeadline,
+          factualSummary: o.factualSummary,
+          discountPct: o.discountPct,
+          originalCents: o.originalCents,
+          finalCents: o.finalCents,
+          expiresAt: o.expiresAt,
+          distanceM: o.distanceM,
+          contextSignals: o.contextSignals,
+          imageEmoji: o.imageEmoji,
+          accentColor: o.accentColor,
+        })),
+      }),
     }),
   setScenario: (merchantId: string, multiplier: number) =>
     request<{ activeOverrides: Record<string, number> }>(`/api/transactions/scenario`, {
