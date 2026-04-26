@@ -9,13 +9,13 @@ module.exports = {
     extend: {
       colors: {
         wallet: {
-          bg: "#0B0B0F",
-          card: "#15151B",
-          border: "#26262E",
-          accent: "#F2C75C",
-          accentDark: "#D9A93B",
-          quiet: "#E26A6A",
-          ok: "#4CB28E",
+          bg: "#0B0C10",
+          card: "#14151C",
+          border: "#272A35",
+          accent: "#E0FF4F",
+          accentDark: "#C8E639",
+          quiet: "#FF4A60",
+          ok: "#00E5FF",
         },
       },
       fontFamily: {

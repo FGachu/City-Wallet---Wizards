@@ -19,7 +19,7 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.bg }} edges={["top"]}>
       <ScrollView contentContainerStyle={{ padding: 20, gap: 14 }}>
-        <Text style={{ color: theme.colors.text, fontSize: 24, fontWeight: "700" }}>Profile</Text>
+        <Text style={{ color: theme.colors.text, fontSize: 32, fontWeight: "900", letterSpacing: -1, textTransform: "uppercase" }}>Profile</Text>
 
         <Section title="Identity">
           <Row k="Name" v="Mia (demo)" />
@@ -53,9 +53,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     <View style={{ gap: 6 }}>
       <Text
         style={{
-          color: theme.colors.textMuted,
-          fontSize: 11,
-          fontWeight: "700",
+          color: theme.colors.text,
+          fontSize: 14,
+          fontWeight: "900",
           letterSpacing: 1,
           textTransform: "uppercase",
         }}
@@ -65,8 +65,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <View
         style={{
           backgroundColor: theme.colors.card,
-          borderRadius: theme.radius.md,
-          borderWidth: 1,
+          borderRadius: 8,
+          borderWidth: 1.5,
           borderColor: theme.colors.border,
           overflow: "hidden",
         }}
@@ -89,12 +89,12 @@ function Row({ k, v }: { k: string; v: string }) {
         borderBottomColor: theme.colors.border,
       }}
     >
-      <Text style={{ color: theme.colors.textMuted, fontSize: 13 }}>{k}</Text>
+      <Text style={{ color: theme.colors.textMuted, fontSize: 13, fontWeight: "700" }}>{k}</Text>
       <Text
         style={{
           color: theme.colors.text,
           fontSize: 13,
-          fontWeight: "600",
+          fontWeight: "800",
           maxWidth: "60%",
           textAlign: "right",
         }}

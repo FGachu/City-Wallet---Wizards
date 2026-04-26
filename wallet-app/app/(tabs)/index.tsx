@@ -38,16 +38,25 @@ export default function HomeScreen() {
           />
         }
       >
-        <View style={{ gap: 4 }}>
-          <Text style={{ color: theme.colors.text, fontSize: 28, fontWeight: "700", lineHeight: 34 }}>
+        <View style={{ gap: 4, marginBottom: 12 }}>
+          <Text style={{ color: theme.colors.text, fontSize: 32, fontWeight: "900", lineHeight: 38, letterSpacing: -1, textTransform: "uppercase" }}>
             Hey Lena 👋
           </Text>
           {context && (
-            <Text style={{ color: theme.colors.textMuted, fontSize: 16, fontWeight: "500" }}>
-              {context.temp ? `${Math.round(context.temp)}°C` : ""} {context.condition} {context.city ? `in ${context.city}` : ""}
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 }}>
+              <View style={{ backgroundColor: theme.colors.accent + "15", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, borderWidth: 1, borderColor: theme.colors.accent + "40" }}>
+                <Text style={{ color: theme.colors.accent, fontSize: 11, fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                  {context.temp ? `${Math.round(context.temp)}°C` : ""} {context.condition}
+                </Text>
+              </View>
+              {context.city && (
+                <Text style={{ color: theme.colors.textMuted, fontSize: 13, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                  {context.city}
+                </Text>
+              )}
+            </View>
           )}
-          <Text style={{ color: theme.colors.textMuted, fontSize: 15, marginTop: 4 }}>
+          <Text style={{ color: theme.colors.textMuted, fontSize: 14, marginTop: 8, fontWeight: "600" }}>
             One offer is tuned to your last 12 minutes.
           </Text>
         </View>
@@ -63,14 +72,16 @@ export default function HomeScreen() {
         )}
 
         {others.length > 0 && (
-          <View style={{ gap: 10 }}>
+          <View style={{ gap: 16 }}>
             <Text
               style={{
-                color: theme.colors.textMuted,
-                fontSize: 11,
-                fontWeight: "700",
+                color: theme.colors.text,
+                fontSize: 14,
+                fontWeight: "900",
                 letterSpacing: 1,
                 textTransform: "uppercase",
+                marginTop: 8,
+                marginBottom: 4,
               }}
             >
               Also nearby

@@ -33,26 +33,27 @@ export function Button({
           : isSecondary
           ? theme.colors.cardElevated
           : "transparent",
-        borderWidth: variant === "ghost" ? 1 : 0,
-        borderColor: theme.colors.border,
-        borderRadius: theme.radius.full,
+        borderWidth: 1.5,
+        borderColor: isPrimary ? theme.colors.accent : theme.colors.border,
+        borderRadius: 8,
         paddingVertical: 14,
         paddingHorizontal: 24,
         alignItems: "center",
         justifyContent: "center",
-        minHeight: 50,
+        minHeight: 52,
       })}
     >
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
         {loading ? (
-          <ActivityIndicator color={isPrimary ? "#0B0B0F" : theme.colors.text} size="small" />
+          <ActivityIndicator color={isPrimary ? theme.colors.bg : theme.colors.text} size="small" />
         ) : null}
         <Text
           style={{
-            color: isPrimary ? "#0B0B0F" : theme.colors.text,
-            fontWeight: "700",
-            fontSize: 15,
-            letterSpacing: 0.2,
+            color: isPrimary ? theme.colors.bg : theme.colors.text,
+            fontWeight: "900",
+            fontSize: 14,
+            letterSpacing: 1,
+            textTransform: "uppercase",
           }}
         >
           {label}

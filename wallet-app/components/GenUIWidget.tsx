@@ -66,22 +66,29 @@ function CountdownPill({
 }) {
   const cd = useCountdown(expiresAt);
   const expiringSoon = cd.ms < 5 * 60_000;
-  const bg = expiringSoon || tone === "urgent" ? theme.colors.quiet : theme.colors.cardElevated;
+  const bg = expiringSoon || tone === "urgent" ? theme.colors.quiet : theme.colors.bg;
   return (
     <View
       style={{
         backgroundColor: bg,
-        borderRadius: theme.radius.full,
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: expiringSoon || tone === "urgent" ? theme.colors.quiet : theme.colors.border,
         paddingVertical: size === "sm" ? 2 : 4,
-        paddingHorizontal: size === "sm" ? 8 : 10,
+        paddingHorizontal: size === "sm" ? 6 : 8,
         flexDirection: "row",
         alignItems: "center",
-        gap: 4,
+        gap: 6,
       }}
     >
-      <Text style={{ color: theme.colors.text, fontSize: size === "sm" ? 9 : 11, fontWeight: "600" }}>
-        ⏱
-      </Text>
+      <View
+        style={{
+          width: size === "sm" ? 4 : 6,
+          height: size === "sm" ? 4 : 6,
+          borderRadius: size === "sm" ? 2 : 3,
+          backgroundColor: expiringSoon || tone === "urgent" ? "#fff" : theme.colors.accent,
+        }}
+      />
       <Text
         style={{
           color: expiringSoon || tone === "urgent" ? "#fff" : theme.colors.textMuted,
@@ -98,8 +105,8 @@ function CountdownPill({
 
 function PriceLine({ offer, accent }: { offer: Offer; accent: string }) {
   return (
-    <View style={{ flexDirection: "row", alignItems: "baseline", gap: 10 }}>
-      <Text style={{ color: accent, fontSize: 26, fontWeight: "800" }}>
+    <View style={{ flexDirection: "row", alignItems: "baseline", gap: 12 }}>
+      <Text style={{ color: accent, fontSize: 28, fontWeight: "900", letterSpacing: -1 }}>
         €{(offer.finalCents / 100).toFixed(2)}
       </Text>
       <Text
@@ -107,6 +114,7 @@ function PriceLine({ offer, accent }: { offer: Offer; accent: string }) {
           color: theme.colors.textDim,
           fontSize: 15,
           textDecorationLine: "line-through",
+          fontWeight: "600",
         }}
       >
         €{(offer.originalCents / 100).toFixed(2)}
@@ -114,13 +122,13 @@ function PriceLine({ offer, accent }: { offer: Offer; accent: string }) {
       <View
         style={{
           backgroundColor: accent,
-          borderRadius: theme.radius.sm,
+          borderRadius: 4,
           paddingHorizontal: 6,
           paddingVertical: 2,
         }}
       >
-        <Text style={{ color: "#0B0B0F", fontSize: 11, fontWeight: "800" }}>
-          −{offer.discountPct}%
+        <Text style={{ color: theme.colors.bg, fontSize: 11, fontWeight: "900", textTransform: "uppercase" }}>
+          SAVE {offer.discountPct}%
         </Text>
       </View>
     </View>
@@ -129,18 +137,20 @@ function PriceLine({ offer, accent }: { offer: Offer; accent: string }) {
 
 function Chips({ items }: { items: string[] }) {
   return (
-    <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap" }}>
+    <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
       {items.map((s, i) => (
         <View
           key={`${s}-${i}`}
           style={{
-            backgroundColor: "#00000033",
-            borderRadius: theme.radius.full,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            borderRadius: 4,
             paddingVertical: 4,
-            paddingHorizontal: 10,
+            paddingHorizontal: 8,
+            backgroundColor: theme.colors.bg,
           }}
         >
-          <Text style={{ color: theme.colors.textMuted, fontSize: 11, fontWeight: "500" }}>
+          <Text style={{ color: theme.colors.textMuted, fontSize: 10, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5 }}>
             {s}
           </Text>
         </View>
@@ -152,30 +162,37 @@ function Chips({ items }: { items: string[] }) {
 function HeroWidget({ offer, widget, onPress }: Props) {
   const accent = widget.palette.accent;
   return (
-    <Pressable onPress={onPress} style={{ borderRadius: theme.radius.xl, overflow: "hidden" }}>
-      <LinearGradient
-        colors={[accent + "33", widget.palette.surface ?? theme.colors.card]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{
-          padding: 20,
-          borderWidth: 1,
-          borderColor: theme.colors.border,
-          borderRadius: theme.radius.xl,
-        }}
-      >
+    <Pressable
+      onPress={onPress}
+      style={{
+        borderRadius: 12,
+        overflow: "hidden",
+        borderWidth: 1.5,
+        borderColor: theme.colors.border,
+        backgroundColor: widget.palette.surface ?? theme.colors.card,
+        shadowColor: accent,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 3,
+      }}
+    >
+      <View style={{ height: 4, backgroundColor: accent }} />
+      <View style={{ padding: 20 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
           <View
             style={{
-              width: 56,
-              height: 56,
-              borderRadius: theme.radius.lg,
-              backgroundColor: accent + "44",
+              width: 52,
+              height: 52,
+              borderRadius: 8,
+              backgroundColor: accent + "15",
+              borderWidth: 1,
+              borderColor: accent + "40",
               alignItems: "center",
               justifyContent: "center",
             }}
           >
-            <Text style={{ fontSize: 32 }}>{widget.slots.emoji ?? offer.imageEmoji}</Text>
+            <Text style={{ fontSize: 26 }}>{widget.slots.emoji ?? offer.imageEmoji}</Text>
           </View>
           {widget.slots.showCountdown !== false ? (
             <CountdownPill expiresAt={offer.expiresAt} tone={widget.tone} />
@@ -187,8 +204,8 @@ function HeroWidget({ offer, widget, onPress }: Props) {
             style={{
               color: accent,
               fontSize: 11,
-              fontWeight: "700",
-              letterSpacing: 0.6,
+              fontWeight: "800",
+              letterSpacing: 1,
               textTransform: "uppercase",
               marginTop: 18,
             }}
@@ -199,10 +216,11 @@ function HeroWidget({ offer, widget, onPress }: Props) {
         <Text
           style={{
             color: theme.colors.text,
-            fontSize: 24,
-            fontWeight: "700",
-            lineHeight: 30,
-            marginTop: widget.slots.kicker ? 4 : 18,
+            fontSize: 22,
+            fontWeight: "800",
+            lineHeight: 28,
+            marginTop: widget.slots.kicker ? 6 : 18,
+            letterSpacing: -0.4,
           }}
         >
           {widget.slots.headline}
@@ -214,31 +232,31 @@ function HeroWidget({ offer, widget, onPress }: Props) {
         ) : null}
 
         {widget.slots.showPrice !== false ? (
-          <View style={{ marginTop: 18 }}>
+          <View style={{ marginTop: 20 }}>
             <PriceLine offer={offer} accent={accent} />
           </View>
         ) : null}
 
         {widget.slots.chips && widget.slots.chips.length > 0 ? (
-          <View style={{ marginTop: 14 }}>
+          <View style={{ marginTop: 18 }}>
             <Chips items={widget.slots.chips} />
           </View>
         ) : null}
 
         <View
           style={{
-            marginTop: 18,
+            marginTop: 20,
             backgroundColor: accent,
-            borderRadius: theme.radius.md,
-            paddingVertical: 10,
+            borderRadius: 6,
+            paddingVertical: 12,
             alignItems: "center",
           }}
         >
-          <Text style={{ color: "#0B0B0F", fontSize: 14, fontWeight: "800" }}>
+          <Text style={{ color: theme.colors.bg, fontSize: 14, fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.5 }}>
             {widget.slots.ctaText}
           </Text>
         </View>
-      </LinearGradient>
+      </View>
     </Pressable>
   );
 }
@@ -254,18 +272,22 @@ function CompactWidget({ offer, widget, onPress }: Props) {
         gap: 12,
         padding: 14,
         backgroundColor: widget.palette.surface ?? theme.colors.card,
-        borderWidth: 1,
+        borderWidth: 1.5,
         borderColor: theme.colors.border,
-        borderRadius: theme.radius.lg,
+        borderRadius: 8,
         alignItems: "center",
+        borderLeftWidth: 4,
+        borderLeftColor: accent,
       })}
     >
       <View
         style={{
           width: 44,
           height: 44,
-          borderRadius: theme.radius.md,
-          backgroundColor: accent + "33",
+          borderRadius: 6,
+          backgroundColor: accent + "15",
+          borderWidth: 1,
+          borderColor: accent + "40",
           alignItems: "center",
           justifyContent: "center",
         }}
@@ -275,7 +297,7 @@ function CompactWidget({ offer, widget, onPress }: Props) {
       <View style={{ flex: 1, gap: 2 }}>
         <Text
           numberOfLines={1}
-          style={{ color: theme.colors.text, fontSize: 14, fontWeight: "700" }}
+          style={{ color: theme.colors.text, fontSize: 14, fontWeight: "800", letterSpacing: -0.2 }}
         >
           {widget.slots.headline}
         </Text>
@@ -289,7 +311,7 @@ function CompactWidget({ offer, widget, onPress }: Props) {
         ) : null}
         {widget.slots.showPrice !== false ? (
           <View style={{ flexDirection: "row", gap: 6, alignItems: "baseline", marginTop: 2 }}>
-            <Text style={{ color: accent, fontSize: 15, fontWeight: "800" }}>
+            <Text style={{ color: accent, fontSize: 16, fontWeight: "900" }}>
               €{(offer.finalCents / 100).toFixed(2)}
             </Text>
             <Text
@@ -297,13 +319,16 @@ function CompactWidget({ offer, widget, onPress }: Props) {
                 color: theme.colors.textDim,
                 fontSize: 12,
                 textDecorationLine: "line-through",
+                fontWeight: "600",
               }}
             >
               €{(offer.originalCents / 100).toFixed(2)}
             </Text>
-            <Text style={{ color: theme.colors.textDim, fontSize: 11, fontWeight: "700" }}>
-              −{offer.discountPct}%
-            </Text>
+            <View style={{ backgroundColor: accent, borderRadius: 2, paddingHorizontal: 4, paddingVertical: 1 }}>
+              <Text style={{ color: theme.colors.bg, fontSize: 9, fontWeight: "900" }}>
+                −{offer.discountPct}%
+              </Text>
+            </View>
           </View>
         ) : null}
       </View>
@@ -327,23 +352,29 @@ function StickerWidget({ offer, widget, onPress }: Props) {
         alignItems: "center",
         backgroundColor: accent,
         paddingVertical: 8,
-        paddingHorizontal: 14,
-        borderRadius: theme.radius.full,
+        paddingHorizontal: 12,
+        borderRadius: 4,
+        borderWidth: 1.5,
+        borderColor: theme.colors.bg,
+        shadowColor: accent,
+        shadowOffset: { width: 3, height: 3 },
+        shadowOpacity: 1,
+        shadowRadius: 0,
       })}
     >
       <Text style={{ fontSize: 18 }}>{widget.slots.emoji ?? offer.imageEmoji}</Text>
-      <Text style={{ color: "#0B0B0F", fontSize: 13, fontWeight: "800" }}>
+      <Text style={{ color: theme.colors.bg, fontSize: 13, fontWeight: "900", letterSpacing: -0.2 }}>
         {widget.slots.headline}
       </Text>
       <View
         style={{
-          backgroundColor: "#0B0B0F",
-          borderRadius: theme.radius.full,
+          backgroundColor: theme.colors.bg,
+          borderRadius: 4,
           paddingVertical: 3,
           paddingHorizontal: 8,
         }}
       >
-        <Text style={{ color: "#fff", fontSize: 11, fontWeight: "700" }}>
+        <Text style={{ color: accent, fontSize: 10, fontWeight: "900", textTransform: "uppercase" }}>
           {widget.slots.ctaText}
         </Text>
       </View>
@@ -360,25 +391,41 @@ function BannerWidget({ offer, widget, onPress }: Props) {
         opacity: pressed ? 0.85 : 1,
         flexDirection: "row",
         alignItems: "center",
-        gap: 10,
+        gap: 12,
         paddingVertical: 12,
         paddingHorizontal: 16,
         backgroundColor: widget.palette.surface ?? theme.colors.cardElevated,
+        borderWidth: 1.5,
+        borderColor: theme.colors.border,
         borderLeftWidth: 4,
         borderLeftColor: accent,
-        borderRadius: theme.radius.md,
+        borderRadius: 8,
       })}
     >
-      <Text style={{ fontSize: 22 }}>{widget.slots.emoji ?? offer.imageEmoji}</Text>
+      <View
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: 6,
+          backgroundColor: accent + "15",
+          borderWidth: 1,
+          borderColor: accent + "40",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Text style={{ fontSize: 20 }}>{widget.slots.emoji ?? offer.imageEmoji}</Text>
+      </View>
       <View style={{ flex: 1 }}>
         {widget.slots.kicker ? (
           <Text
             style={{
               color: accent,
               fontSize: 10,
-              fontWeight: "700",
-              letterSpacing: 0.6,
+              fontWeight: "800",
+              letterSpacing: 1,
               textTransform: "uppercase",
+              marginBottom: 2,
             }}
           >
             {widget.slots.kicker}
@@ -386,19 +433,21 @@ function BannerWidget({ offer, widget, onPress }: Props) {
         ) : null}
         <Text
           numberOfLines={1}
-          style={{ color: theme.colors.text, fontSize: 13, fontWeight: "700" }}
+          style={{ color: theme.colors.text, fontSize: 14, fontWeight: "800", letterSpacing: -0.2 }}
         >
           {widget.slots.headline}
         </Text>
         {widget.slots.showPrice !== false ? (
-          <Text style={{ color: theme.colors.textMuted, fontSize: 11, marginTop: 1 }}>
-            €{(offer.finalCents / 100).toFixed(2)} · −{offer.discountPct}%
+          <Text style={{ color: theme.colors.textMuted, fontSize: 12, marginTop: 2, fontWeight: "600" }}>
+            €{(offer.finalCents / 100).toFixed(2)} · <Text style={{ color: accent }}>−{offer.discountPct}%</Text>
           </Text>
         ) : null}
       </View>
-      <Text style={{ color: accent, fontSize: 12, fontWeight: "800" }}>
-        {widget.slots.ctaText} →
-      </Text>
+      <View style={{ backgroundColor: theme.colors.bg, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 4, borderWidth: 1, borderColor: theme.colors.border }}>
+        <Text style={{ color: accent, fontSize: 11, fontWeight: "900", textTransform: "uppercase" }}>
+          {widget.slots.ctaText}
+        </Text>
+      </View>
     </Pressable>
   );
 }

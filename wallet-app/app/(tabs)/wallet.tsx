@@ -12,27 +12,30 @@ export default function WalletScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.bg }} edges={["top"]}>
       <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }}>
-        <Text style={{ color: theme.colors.text, fontSize: 24, fontWeight: "700" }}>Wallet</Text>
+        <Text style={{ color: theme.colors.text, fontSize: 32, fontWeight: "900", letterSpacing: -1, textTransform: "uppercase" }}>Wallet</Text>
 
         <View
           style={{
-            padding: 18,
-            borderRadius: theme.radius.lg,
-            backgroundColor: theme.colors.card,
-            borderWidth: 1,
+            padding: 20,
+            borderRadius: 8,
+            backgroundColor: theme.colors.cardElevated,
+            borderWidth: 1.5,
             borderColor: theme.colors.border,
+            borderLeftWidth: 4,
+            borderLeftColor: theme.colors.accent,
           }}
         >
-          <Text style={{ color: theme.colors.textMuted, fontSize: 12, fontWeight: "600" }}>
+          <Text style={{ color: theme.colors.textMuted, fontSize: 12, fontWeight: "800", textTransform: "uppercase", letterSpacing: 1 }}>
             Saved this week
           </Text>
           <Text
             style={{
               color: theme.colors.accent,
-              fontSize: 32,
-              fontWeight: "800",
+              fontSize: 36,
+              fontWeight: "900",
               marginTop: 4,
               fontVariant: ["tabular-nums"],
+              letterSpacing: -1,
             }}
           >
             €{(totalSaved / 100).toFixed(2)}
@@ -41,11 +44,12 @@ export default function WalletScreen() {
 
         <Text
           style={{
-            color: theme.colors.textMuted,
-            fontSize: 11,
-            fontWeight: "700",
+            color: theme.colors.text,
+            fontSize: 14,
+            fontWeight: "900",
             letterSpacing: 1,
             textTransform: "uppercase",
+            marginTop: 8,
           }}
         >
           History
@@ -57,26 +61,26 @@ export default function WalletScreen() {
             style={{
               flexDirection: "row",
               justifyContent: "space-between",
-              padding: 14,
-              borderRadius: theme.radius.md,
+              padding: 16,
+              borderRadius: 8,
               backgroundColor: theme.colors.card,
               borderWidth: 1,
               borderColor: theme.colors.border,
             }}
           >
             <View>
-              <Text style={{ color: theme.colors.text, fontSize: 15, fontWeight: "600" }}>
+              <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: "800", letterSpacing: -0.2 }}>
                 {h.merchant}
               </Text>
-              <Text style={{ color: theme.colors.textMuted, fontSize: 12 }}>
+              <Text style={{ color: theme.colors.textMuted, fontSize: 13, marginTop: 2, fontWeight: "600" }}>
                 {h.item} · {h.when}
               </Text>
             </View>
             <View style={{ alignItems: "flex-end" }}>
-              <Text style={{ color: theme.colors.text, fontSize: 14, fontWeight: "700" }}>
+              <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: "900" }}>
                 €{(h.amount / 100).toFixed(2)}
               </Text>
-              <Text style={{ color: theme.colors.ok, fontSize: 11 }}>
+              <Text style={{ color: theme.colors.ok, fontSize: 11, fontWeight: "800", textTransform: "uppercase" }}>
                 saved €{(h.saved / 100).toFixed(2)}
               </Text>
             </View>
